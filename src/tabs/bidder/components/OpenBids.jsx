@@ -15,6 +15,35 @@ export const OpenBids = () => {
     const [bidData, setBidData] = useState({});
     const [auctionMetadata, setAuctionMetadata] = useState({});
 
+    // Function to fetch metadata for an auction
+    const fetchAuctionMetadata = async (auctionId, metadata) => {
+        if (!metadata) return;
+        
+        try {
+            const metadataUrl = fieldsToString(
+                metadata.map(field => 
+                    BigInt(filterVisibility(field).replace('field', ''))
+                )
+            );
+            
+            const response = await fetch(metadataUrl);
+            const json = await response.json();
+            const parsedMetadata = JSON.parse(json);
+            
+            if (parsedMetadata.image) {
+                setAuctionMetadata(prev => ({
+                    ...prev,
+                    [auctionId]: {
+                        ...prev[auctionId],
+                        image: parsedMetadata.image
+                    }
+                }));
+            }
+        } catch (error) {
+            console.warn('Error fetching metadata for auction:', auctionId, error);
+        }
+    };
+
     const processBidData = () => {
         setLoading(true);
         try {
@@ -39,6 +68,7 @@ export const OpenBids = () => {
             for (const bid of userBids) {
                 const auctionId = bid.auctionId;
                 const auction = auctionState.auctions[auctionId];
+                console.log("Public auction id", auctionId);
                 
                 if (!auction) continue;
                 
@@ -46,6 +76,12 @@ export const OpenBids = () => {
                 if (auction.redeemed) continue;
 
                 console.log("Auction winer: ", auction.winner);
+                console.log("Auction metadata: ", auction.metadata);
+                
+                // Fetch metadata for this auction
+                if (auction.metadata) {
+                    fetchAuctionMetadata(auctionId, auction.metadata);
+                }
                 
                 processedData[bid.id] = {
                     id: bid.id,
@@ -53,7 +89,7 @@ export const OpenBids = () => {
                     amount: bid.amount,
                     isPublic: bid.isPublic,
                     name: auction.name,
-                    metadata: auction.metadata ? auction.metadata : [],
+                    metadata: auction.metadata,
                     auctioneer: auction.auctioneer,
                     highestBid: auction.highestBid || 0,
                     startingBid: auction.startingBid,
@@ -76,14 +112,20 @@ export const OpenBids = () => {
                     
                     const bidId = filterVisibility(record.data.bid_id);
                     const amount = parseInt(filterVisibility(record.data.bid.amount).replace('u64', ''));
+                    console.log("Private auction metadata", auction.metadata);
+                    
+                    // Fetch metadata for this auction
+                    if (auction.metadata) {
+                        fetchAuctionMetadata(auctionId, auction.metadata);
+                    }
                     
                     processedData[bidId] = {
                         id: bidId,
                         auctionId: auctionId,
                         amount: amount,
                         isPublic: false,
-                        auctionName: auction.name,
-                        auctionImage: auction.metadata?.image || '',
+                        name: auction.name,
+                        metadata: auction.metadata,
                         auctioneer: auction.auctioneer,
                         highestBid: auction.highestBid || 0,
                         startingBid: auction.startingBid,
@@ -156,14 +198,15 @@ export const OpenBids = () => {
                 dataSource={Object.entries(bidData)}
                 renderItem={([bidId, bid]) => {
                     const shortAuctionId = `${bid.auctionId.substring(0, 20)}...field`;
+                    const auctionImage = auctionMetadata[bid.auctionId]?.image;
 
                     return (
                         <Card size="small" style={{ marginBottom: 16 }}>
                             <Row align="middle" gutter={16}>
-                                {bid.auctionImage && (
+                                {auctionImage && (
                                     <Col span={4}>
                                         <img 
-                                            src={bid.auctionImage} 
+                                            src={auctionImage} 
                                             alt="Auction item"
                                             style={{ 
                                                 width: '50px',
@@ -174,7 +217,7 @@ export const OpenBids = () => {
                                         />
                                     </Col>
                                 )}
-                                <Col span={bid.auctionImage ? 20 : 24}>
+                                <Col span={auctionImage ? 20 : 24}>
                                     <Space direction="vertical" size={0}>
                                         <Text strong>
                                             Bid Amount: {bid.amount / 1_000_000} ALEO
@@ -182,9 +225,9 @@ export const OpenBids = () => {
                                         <Text type="secondary" style={{ fontSize: '12px' }}>
                                             Auction ID: {shortAuctionId}
                                         </Text>
-                                        {bid.auctionName && (
+                                        {bid.name && (
                                             <Text type="secondary">
-                                                Auction: {bid.auctionName}
+                                                Auction: {bid.name}
                                             </Text>
                                         )}
                                         <Space>
