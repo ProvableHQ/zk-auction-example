@@ -6,6 +6,7 @@ import { AuctionState } from "./components/AuctionState.jsx";
 import { WalletWrapper } from "./components/WalletWrapper.jsx";
 
 import {
+    AuditOutlined,
     CodeOutlined,
     SwapOutlined,
 } from "@ant-design/icons";
@@ -17,10 +18,10 @@ const menuItems = [
     {
         label: <Link to="/auctioneer">Create Auction</Link>,
         key: "auctioneer",
-        icon: <CodeOutlined />,
+        icon: <AuditOutlined />,
     },
     {
-        label: <Link to="/bidder">Bidder</Link>,
+        label: <Link to="/bidder">Marketplace</Link>,
         key: "bidder",
         icon: <SwapOutlined />,
     },

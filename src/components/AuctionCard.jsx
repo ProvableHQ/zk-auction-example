@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Image, Statistic, Typography, Tabs, List, Button, Space, Tag, Divider } from 'antd';
 import { convertFieldToString, fieldsToString } from '../core/encoder.js';
-import { removeVisbilityModifiers } from '../core/processing.js';
+import { filterVisibility } from '../core/processing.js';
 import { BidForm } from './BidForm';
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { InviteForm } from './InviteForm';
@@ -17,7 +17,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
     const auctionName = convertFieldToString(ticket.data.auction.name);
     const itemData = ticket.data.auction.item;
     const bidTypesAccepted = ticket.data.settings.bid_types_accepted;
-    const startingBid = parseInt(removeVisbilityModifiers(ticket.data.auction.starting_bid).replace('u64', ''));
+    const startingBid = parseInt(filterVisibility(ticket.data.auction.starting_bid).replace('u64', ''));
     const { publicKey, requestTransaction } = useWallet();
     const isPublic = data.isPublic;
     const auctioneerAddress = data.auctioneerAddress;
@@ -33,7 +33,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
             try {
                 const metadataUrl = fieldsToString(
                     itemData.offchain_data.map(image =>
-                        BigInt(removeVisbilityModifiers(image).replace('field', ''))
+                        BigInt(filterVisibility(image).replace('field', ''))
                     )
                 );
                 const res = await fetch(metadataUrl);
@@ -74,33 +74,30 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
     };
 
     const renderBidButtons = () => {
-        if (!isOwner()) {
-            return (
-                <Row gutter={[8, 8]} justify="end">
-                    {(bidTypesAccepted === '0field' || bidTypesAccepted === '2field') && (
-                        <Col>
-                            <Button 
-                                type="primary"
-                                onClick={() => showBidForm('private')}
-                            >
-                                Bid Privately
-                            </Button>
-                        </Col>
-                    )}
-                    {(bidTypesAccepted === '1field' || bidTypesAccepted === '2field') && (
-                        <Col>
-                            <Button 
-                                type="default"
-                                onClick={() => showBidForm('public')}
-                            >
-                                Bid Publicly
-                            </Button>
-                        </Col>
-                    )}
-                </Row>
-            );
-        }
-        return null;
+        return (
+            <Row gutter={[8, 8]} justify="end">
+                {(bidTypesAccepted === '0field' || bidTypesAccepted === '2field') && (
+                    <Col>
+                        <Button 
+                            type="primary"
+                            onClick={() => showBidForm('private')}
+                        >
+                            Bid Privately
+                        </Button>
+                    </Col>
+                )}
+                {(bidTypesAccepted === '1field' || bidTypesAccepted === '2field') && (
+                    <Col>
+                        <Button 
+                            type="default"
+                            onClick={() => showBidForm('public')}
+                        >
+                            Bid Publicly
+                        </Button>
+                    </Col>
+                )}
+            </Row>
+        );
     };
 
     const renderOwnerButtons = () => {
@@ -263,7 +260,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                 </Col>
                 <Col span={16}>
                     <Row gutter={[16, 16]}>
-                        <Col span={18}>
+                        <Col span={24}>
                             <Row gutter={[16, 16]}>
                                 <Col span={8}>
                                     <Statistic title="Starting Bid" value={startingBid / 1_000_000.0} suffix="ALEO" />
@@ -276,12 +273,20 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                                     />
                                 </Col>
                                 <Col span={8}>
+                                    <Statistic title="Bid Types" value={getBidTypeLabel(bidTypesAccepted)} />
+                                </Col>
+                            </Row>
+                            <Row gutter={[16, 16]} style={{ marginTop: '16px' }}>
+                                <Col span={8}>
+                                    <Statistic title="Private Bids" value={matchingPrivateBids.length || totalBids - publicBids.length} />
+                                </Col>
+                                <Col span={8}>
+                                    <Statistic title="Public Bids" value={publicBids.length} />
+                                </Col>
+                                <Col span={8}>
                                     <Statistic title="Total Bids" value={totalBids} />
                                 </Col>
                             </Row>
-                        </Col>
-                        <Col span={6}>
-                            <Statistic title="Bid Types" value={getBidTypeLabel(bidTypesAccepted)} />
                         </Col>
                     </Row>
                     

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, List, Typography, Button } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { PROGRAM_ID } from '../../core/constants.js';
-import { removeVisbilityModifiers, parseAleoStyle } from '../../core/processing.js';
+import { filterVisibility, parseAleoStyle } from '../../core/processing.js';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 import { useAuctionState } from '../../components/AuctionState.jsx';
 import { AleoNetworkClient } from '@provablehq/sdk';
@@ -47,7 +47,7 @@ export const OpenAuctions = () => {
             const privateBids = records
                 .filter(record => record.recordName === "PrivateBid")
                 .map(record => {
-                    record = removeVisbilityModifiers(record);
+                    record = filterVisibility(record);
                     return {
                         auctionId: record.data.bid.auction_id,
                         amount: parseInt(record.data.bid.amount.replace('u64', '')),
@@ -63,7 +63,7 @@ export const OpenAuctions = () => {
 
             const processedData = {};
             for (const ticketRecord of auctionTickets) {
-                const ticket = removeVisbilityModifiers(structuredClone(ticketRecord));
+                const ticket = filterVisibility(structuredClone(ticketRecord));
                 const auctionId = ticket.data.auction_id;
                 const isPublic = ticket.data.settings.auction_privacy !== '0field';
                 const auctioneerAddress = ticket.owner;

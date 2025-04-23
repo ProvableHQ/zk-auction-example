@@ -101,6 +101,7 @@ program private_auction_test_2.aleo {
         settings: privacy_settings,
     }
 
+    // TODO: THIS NEEDS A PRIVACY MODIFIER
     // Create an invite representing an auction.
     // - `owner`     : The address of the account invited to bid.
     // - `auction`   : The auction data.
@@ -111,6 +112,7 @@ program private_auction_test_2.aleo {
         auction: auction,
         auctioneer: address,
         auction_id: field,
+        settings: privacy_settings,
     }
 
     // A bid receipt to ensure the bidder knows their own bids so it can discover them later.
@@ -372,6 +374,7 @@ program private_auction_test_2.aleo {
             auctioneer: auction_ticket.owner,
             auction: auction_ticket.auction,
             auction_id: auction_ticket.auction_id,
+            settings: auction_ticket.settings,
         };
 
         return (auction_invite, auction_ticket);

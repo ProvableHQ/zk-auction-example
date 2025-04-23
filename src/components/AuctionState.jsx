@@ -15,11 +15,37 @@ export const useAuctionState = () => {
 // Define the data structure
 export const AuctionState = ({ children }) => {
     const [auctionState, setAuctionState] = useState({
-        auctioneerRecords: [], // Raw records from the chain
-        auctioneerState: {}, // Organized by auction ID
-        bidderRecords: [], // Raw records from the chain
-        bidderState: {}, // Organized by bidder address
+        walletAdapter: "",
+        userAuctions: new Set(), // Auction IDs the user made.
+        userBidIds: new Set(), // Bid IDs the user made.
+        bidsOnUserAuctions: new Set(), // Bid ids of auctions the user owns.
+        auctions: {
+            id: "",
+            activeTicket: "id",
+            privateBids: new Set(),  // Set of bid IDs. (Gotten from records)
+            publicBids: new Set(), // Set of bid public IDs (From endpoint)
+            isPublic: false,
+            bidTypes: "private",
+            active: false,
+            claimed: false,
+            highestBid: 0,
+            startingBid: 0,
+            item: {}
+            auctioneer: "",
+        },
+        bids: {
+            bid_Id: "id",
+            auctionId: "id",
+            amount: 0,
+            isPublic: false,
+            owner: "",
+            winner: false,
+        },
+        bidInvites: {}, // List of bid invite records.
+        bidReceipts: {}, // List of bid receipts.
+        privateBids: {}, // List of private bids.
     });
+
 
     const addNewBid = (amount, auctioneer, bidder, id, txId) => {
         setAuctionState(prevState => ({
@@ -73,8 +99,8 @@ export const AuctionState = ({ children }) => {
                 ...prevState.bidderState,
                 [bid.bidder]: {
                     ...prevState.bidderState[bid.bidder],
-                    bids: prevState.bidderState[bid.bidder]?.bids.map(existingBid => 
-                        existingBid.txId === bid.txId 
+                    bids: prevState.bidderState[bid.bidder]?.bids.map(existingBid =>
+                        existingBid.txId === bid.txId
                             ? { ...existingBid, isWinner: true }
                             : existingBid
                     ) || [],

@@ -21,7 +21,7 @@ export const BidForm = ({ visible, onCancel, auctionData, bidType }) => {
                 inputs = [
                     values.amount.toString() + "u64",
                     auctionData.auctionId,
-                    auctionData.auctioneer,
+                    auctionData.auctioneerAddress,
                     "2group",
                     nonce,
                 ];

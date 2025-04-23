@@ -5,18 +5,18 @@ import { InvitedAuctions } from './components/InvitedAuctions';
 
 export const AuctionExplorer = () => {
     return (
-        <Card style={{ width: '100%', height: '100%' }}>
+        <Card style={{ width: '100%', minHeight: '200px' }}>
             <Tabs
                 defaultActiveKey="1"
                 items={[
                     {
                         key: '1',
-                        label: 'Public Auctions',
+                        label: 'Live Public Auctions',
                         children: <PublicAuctions />,
                     },
                     {
                         key: '2',
-                        label: 'Invited Auctions',
+                        label: 'Invite-Only Private Auctions',
                         children: <InvitedAuctions />,
                     },
                 ]}

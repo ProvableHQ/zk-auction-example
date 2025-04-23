@@ -4,7 +4,7 @@ import { ReloadOutlined } from '@ant-design/icons';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 import { PROGRAM_ID } from '../../../core/constants';
 import { AuctionCard } from '../../../components/AuctionCard';
-import { removeVisbilityModifiers } from '../../../core/processing';
+import { filterVisibility } from '../../../core/processing';
 
 export const InvitedAuctions = () => {
     const { connected, requestRecords } = useWallet();
@@ -19,7 +19,7 @@ export const InvitedAuctions = () => {
             const records = await requestRecords(PROGRAM_ID);
             const invites = records.filter(record => 
                 record.recordName === "AuctionInvite" && !record.spent
-            ).map(removeVisbilityModifiers);
+            ).map(filterVisibility);
             setInvitedAuctions(invites);
         } catch (error) {
             console.error('Error fetching auction invites:', error);

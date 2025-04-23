@@ -3,7 +3,7 @@ import { Card, List, Button, Typography, Row, Col, Space } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 import { PROGRAM_ID } from '../../../core/constants';
-import { removeVisbilityModifiers } from '../../../core/processing';
+import { filterVisibility } from '../../../core/processing';
 import { parseAleoStyle } from '../../../core/processing';
 import { fieldsToString } from '../../../core/encoder';
 
@@ -49,7 +49,7 @@ export const OpenBids = () => {
             // Process auction invites
             const auctionInvites = records.filter(record => 
                 record.recordName === "AuctionInvite" && !record.spent
-            ).map(removeVisbilityModifiers);
+            ).map(filterVisibility);
 
             for (const invite of auctionInvites) {
                 try {
@@ -83,7 +83,7 @@ export const OpenBids = () => {
             const records = await requestRecords(PROGRAM_ID);
             const bids = records.filter(record => 
                 record.recordName === "BidReceipt" && !record.spent
-            ).map(removeVisbilityModifiers);
+            ).map(filterVisibility);
             setOpenBids(bids);
             await fetchAuctionMetadata();
         } catch (error) {
