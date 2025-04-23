@@ -13,26 +13,19 @@ const { Text } = Typography;
 
 export const OpenAuctions = () => {
     const { connected, requestRecords } = useWallet();
-    const { auctionState, setAuctioneerState } = useAuctionState();
+    const { auctionState, setAuctioneerState, getAuctionState, updateAuctionStateOnConnect } = useAuctionState();
     const [loading, setLoading] = useState(false);
     const [auctionData, setAuctionData] = useState({});
-    const networkClient = new AleoNetworkClient("https://api.explorer.provable.com/v1");
 
     const fetchAuctionData = async () => {
         setLoading(true);
-        try {
-            // Fetch all necessary data in parallel
-            const [records, publicBidsRes] = await Promise.all([
-                requestRecords(PROGRAM_ID),
-                fetch(`https://api.testnet.aleoscan.io/v2/mapping/list_program_mapping_values/${PROGRAM_ID}/public_bids`)
-            ]);
+        console.log(auctionState)
 
-            // Process public bids
-            const publicBidsData = await publicBidsRes.json();
+        try {
             const publicBidsByAuction = {};
-            publicBidsData.result.forEach(entry => {
-                const bid = parseAleoStyle(entry.value);
-                const auctionId = bid.auction_id;
+
+            for (const [bidId, bid] of Object.entries(auctionState.bids)) {
+                const auctionId = bid.auctionId;
                 if (!publicBidsByAuction[auctionId]) {
                     publicBidsByAuction[auctionId] = [];
                 }
@@ -41,7 +34,7 @@ export const OpenAuctions = () => {
                     id: entry.key,
                     bidder: bid.bid_public_key
                 });
-            });
+            }
 
             // Process private bids
             const privateBids = records
@@ -115,11 +108,12 @@ export const OpenAuctions = () => {
         } finally {
             setLoading(false);
         }
+        setLoading(false);
     };
 
     useEffect(() => {
         if (connected) {
-            fetchAuctionData().then(() => console.log("Auction data fetched."));
+            updateAuctionStateOnConnect().then(() => {console.log("Auction state updated.", getAuctionState())});
         }
     }, [connected]);
 
