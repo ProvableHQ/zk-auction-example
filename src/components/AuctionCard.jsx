@@ -13,15 +13,23 @@ const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
 export const AuctionCard = ({ auctionId, data, loading }) => {
-    const { ticketRecord, ticket, highestBid, totalBids, publicBids, privateBids } = data;
-    const auctionName = convertFieldToString(ticket.data.auction.name);
-    const itemData = ticket.data.auction.item;
-    const bidTypesAccepted = ticket.data.settings.bid_types_accepted;
-    const startingBid = parseInt(filterVisibility(ticket.data.auction.starting_bid).replace('u64', ''));
     const { publicKey, requestTransaction } = useWallet();
+
+    console.log("AuctionCard data:", data);
+
+    const auctionName = convertFieldToString(data.name);
+    const itemMetadata = data.metadata;
+    const bidTypesAccepted = data.bidTypes;
+    const startingBid = data.startingBid;
     const isPublic = data.isPublic;
-    const auctioneerAddress = data.auctioneerAddress;
-    const matchingPrivateBids = privateBids.filter(bid => bid.auctionId === auctionId);
+    const auctioneer = data.auctioneer;
+    const matchingPrivateBids = data.privateBids.filter(bid => bid.auctionId === auctionId);
+    const publicBids = data.publicBids;
+    const totalBids = (data.privateBids?.length || 0) + (data.publicBids?.length || 0);
+    const ticketRecord = data.ticketRecord;
+    const displayId = data.displayId || auctionId.substring(0, 20) + '...';
+
+    console.log('Matching private bids:', matchingPrivateBids);
 
     const [metadata, setMetadata] = useState({ image: '', name: '' });
     const [bidFormVisible, setBidFormVisible] = useState(false);
@@ -32,7 +40,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
         const fetchMetadata = async () => {
             try {
                 const metadataUrl = fieldsToString(
-                    itemData.offchain_data.map(image =>
+                    itemMetadata.map(image =>
                         BigInt(filterVisibility(image).replace('field', ''))
                     )
                 );
@@ -53,7 +61,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
             case '1field':
                 return 'Public Only';
             case '2field':
-                return 'Mixed';
+                return 'Private & Public';
             default:
                 return 'Unknown';
         }
@@ -70,7 +78,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
     };
 
     const isOwner = () => {
-        return publicKey && ticket.owner === publicKey;
+        return auctioneer === publicKey;
     };
 
     const renderBidButtons = () => {
@@ -231,6 +239,11 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                     </Space>
                 </Col>
             </Row>
+            <Row style={{ marginBottom: 8 }}>
+                <Col>
+                    <Text type="secondary">Auction ID: {displayId}</Text>
+                </Col>
+            </Row>
             <Divider style={{ margin: '0 0 16px 0' }} />
 
             <Row gutter={[16, 16]}>
@@ -244,14 +257,14 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                     <Title level={5} style={{ marginTop: '8px', textAlign: 'center' }}>
                         {metadata.name}
                     </Title>
-                    {auctioneerAddress && (
+                    {auctioneer && (
                         <Typography.Text type="secondary" style={{ 
                             display: 'block', 
                             textAlign: 'center',
                             wordBreak: 'break-all',
                             marginTop: '8px'
                         }}>
-                            Auctioneer: {auctioneerAddress}
+                            Auctioneer: {auctioneer}
                         </Typography.Text>
                     )}
                     <div style={{ marginTop: '16px' }}>

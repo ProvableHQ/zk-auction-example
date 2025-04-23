@@ -174,7 +174,7 @@ function newAuctionFromTicket (state, record) {
         activeTicket: record,
         auctionId: f(record.data.auction_id),
         auctioneer: record.owner,
-        bid_types: f(record.data.settings.bid_types_accepted),
+        bidTypes: f(record.data.settings.bid_types_accepted),
         recordId: record.id,
         invited: false,
         itemId: f(record.data.auction.item.id),
@@ -185,7 +185,7 @@ function newAuctionFromTicket (state, record) {
         privateBids: new Set(),
         privacy: f(record.data.settings.auction_privacy),
         redeemed: false,
-        startingBid: f(record.data.auction.starting_bid),
+        startingBid: parseInt(f(record.data.auction.starting_bid) || 0),
         winner: "",
     };
 }
@@ -202,7 +202,7 @@ function newAuctionFromInvite(state, record) {
         activeTicket: null,
         auctionId: f(record.data.auction_id),
         auctioneer: f(record.data.auctioneer),
-        bid_types: f(record.data?.settings?.bid_types_accepted),
+        bidTypes: f(record.data?.settings?.bid_types_accepted),
         recordId: record.id,
         itemId: f(record.data?.item?.id),
         highestBid: 0,
@@ -212,7 +212,7 @@ function newAuctionFromInvite(state, record) {
         privateBids: new Set(),
         privacy: f(record.data?.settings?.auction_privacy),
         redeemed: false,
-        startingBid: f(record.data?.auction?.starting_bid),
+        startingBid: parseInt(f(record.data?.auction?.starting_bid) || 0),
         winner: "",
     };
 }

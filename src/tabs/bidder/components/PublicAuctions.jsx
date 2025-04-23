@@ -1,158 +1,123 @@
 import React, { useState, useEffect } from 'react';
-import { Card, List, Button } from 'antd';
+import { Card, List, Button, Typography, Space } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
-import { PROGRAM_ID } from '../../../core/constants';
-import { parseAleoStyle } from "../../../core/processing";
+import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
+import { useAuctionState } from '../../../components/AuctionState.jsx';
 import { AuctionCard } from '../../../components/AuctionCard';
-import { AleoNetworkClient } from "@provablehq/sdk";
+
+const { Text } = Typography;
 
 export const PublicAuctions = () => {
+    const { connected } = useWallet();
+    const { auctionState, updateAuctionStateOnConnect, updatePublicAuctionState } = useAuctionState();
     const [loading, setLoading] = useState(false);
-    const [publicAuctions, setPublicAuctions] = useState([]);
-    const networkClient = new AleoNetworkClient("https://api.explorer.provable.com/v1");
+    const [auctionData, setAuctionData] = useState({});
 
-    const fetchAuctionData = async () => {
+    const processAuctionData = () => {
         setLoading(true);
         try {
-            const [publicAuctionsRes, publicBidsRes] = await Promise.all([
-                fetch(`https://api.testnet.aleoscan.io/v2/mapping/list_program_mapping_values/${PROGRAM_ID}/public_auctions`),
-                fetch(`https://api.testnet.aleoscan.io/v2/mapping/list_program_mapping_values/${PROGRAM_ID}/public_bids`),
-            ]);
+            const processedData = {};
 
-            // Process public auction mapping data
-            const publicAuctionsRaw = (await publicAuctionsRes.json()).result.map(entry => ({
-                id: entry.key,
-                data: parseAleoStyle(entry.value),
-            }));
+            console.log("Processing auction data...", auctionState);
+            
+            // Get public auctions
+            const publicAuctions = Object.entries(auctionState.auctions || {})
+                .filter(([_, auction]) => auction.isPublic);
+            
+            for (const [auctionId, auction] of publicAuctions) {
+                // Skip redeemed auctions
+                if (auction.redeemed) continue;
+                
+                // Get public bids for this auction
+                const publicBids = Object.values(auctionState.bids || {})
+                    .filter(bid => bid.auctionId === auctionId && bid.isPublic)
+                    .map(bid => ({
+                        amount: bid.amount,
+                        auctionId: bid.auctionId,
+                        bidder: bid.owner,
+                        id: bid.id,
+                    }));
 
-            // Process public bid mapping data
-            const publicBidsRaw = (await publicBidsRes.json()).result.map(entry => ({
-                id: entry.key,
-                data: parseAleoStyle(entry.value),
-            }));
+                // For public auctions, we don't have private bids, but we'll set up the structure
+                const privateBids = [];
 
-            // Organize public bids by auctionId
-            const publicBidsByAuction = {};
-            publicBidsRaw.forEach(bid => {
-                const auctionId = bid.data.auction_id;
-                if (!publicBidsByAuction[auctionId]) publicBidsByAuction[auctionId] = [];
-                publicBidsByAuction[auctionId].push({
-                    amount: parseInt(bid.data.amount.replace('u64', '')),
-                    id: bid.id,
-                    publicKey: bid.data.bid_public_key,
-                });
-            });
+                // Create the data object for AuctionCard
+                processedData[auctionId] = {
+                    ticketRecord: auction.activeTicket,
+                    name: auction.name,
+                    metadata: auction.metadata,
+                    auctioneer: auction.auctioneer,
+                    bidTypes: auction.bidTypes,
+                    privacy: auction.privacy,
+                    invited: auction.invited,
+                    redeemed: auction.redeemed,
+                    active: !auction.winner,
+                    startingBid: auction.startingBid,
+                    auctionId,
+                    isPublic: auction.isPublic,
+                    highestBid: auction.highestBid || 0,
+                    totalBids: auction.bidCount || 0,
+                    publicBids,
+                    privateBids,
+                    displayId: auctionId.substring(0, 20) + '...' // Add a shortened auction ID for display
+                };
+            }
 
-            console.log("Public Bids By Auction: ", publicBidsByAuction);
-
-            // Process all public auctions
-            const combinedAuctions = await Promise.all(
-                publicAuctionsRaw.map(async (auction) => {
-                    const auctionId = auction.id;
-                    const isPublic = true; // These are all public auctions
-                    const publicBids = publicBidsByAuction[auctionId] || [];
-                    
-                    console.log("AuctionData:  ", auction);
-                    let highestBid = 0, totalBids = 0;
-                    try {
-                        const res = await networkClient.getProgramMappingPlaintext(PROGRAM_ID, 'highest_bids', auctionId);
-                        highestBid = parseInt(res.replace('u64', ''));
-                    } catch (e) {
-                        console.warn(`Failed highestBid for ${auctionId}`, e);
-                    }
-
-                    try {
-                        const res = await networkClient.getProgramMappingPlaintext(PROGRAM_ID, 'bid_count', auctionId);
-                        totalBids = parseInt(res.replace('u64', ''));
-                    } catch (e) {
-                        console.warn(`Failed bid count for ${auctionId}`, e);
-                    }
-
-                    let bidTypesAccepted = "";
-                    try {
-                        const res = await networkClient.getProgramMappingPlaintext(PROGRAM_ID, 'auction_privacy_settings', auctionId);
-                        bidTypesAccepted = res.toObject().bid_types_accepted;
-                    } catch (e) {
-                        console.warn(`Failed bid types accepted for ${auctionId}`, e);
-                    }
-
-                    let auctioneerAddress = "";
-                    try {
-                        const res = await networkClient.getProgramMappingPlaintext(PROGRAM_ID, 'auction_owners', auctionId);
-                        auctioneerAddress = res.toObject();
-                    } catch (e) {
-                        console.warn(`Failed auctioneer address for ${auctionId}`, e);
-                    }
-
-                    console.log("Auctioneer Address: ", auctioneerAddress);
-                    console.log("Bid Types Accepted: ", bidTypesAccepted);
-
-                    // Count the actual number of public bids for this auction
-                    const publicBidCount = publicBids.length;
-                    
-                    // For public auctions, we don't have private bids, but we'll set up the structure
-                    const privateBids = [];
-
-                    return {
-                        auctionId,
-                        isPublic,
-                        auctioneerAddress,
-                        publicBids,
-                        privateBids,
-                        highestBid,
-                        totalBids: publicBidCount, // Use the actual count of public bids
-                        ticket: {
-                            data: {
-                                auction: auction.data,
-                                auctioneerAddress,
-                                settings: { bid_types_accepted: bidTypesAccepted }
-                            },
-                            owner: auction.data.owner
-                        },
-                        data: {
-                            ticket: {
-                                data: {
-                                    auction: auction.data,
-                                    auctioneerAddress,
-                                    settings: { bid_types_accepted: bidTypesAccepted }
-                                },
-                                owner: auction.data.owner
-                            }
-                        }
-                    };
-                })
-            );
-
-            setPublicAuctions(combinedAuctions);
+            console.log("Processed Data: ", processedData);
+            setAuctionData(processedData);
         } catch (error) {
-            console.error('Error fetching auctions:', error);
+            console.error('Error processing auction data:', error);
         } finally {
             setLoading(false);
         }
     };
 
+    const refreshData = async () => {
+        setLoading(true);
+        try {
+            // Update the public state
+            await updatePublicAuctionState();
+            // Process the updated state
+            processAuctionData();
+        } catch (error) {
+            console.error('Error refreshing auction data:', error);
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        fetchAuctionData();
+        // Update the auction state when the component mounts
+        updateAuctionStateOnConnect().then(() => {
+            console.log("Auction state updated for PublicAuctions.", auctionState);
+            processAuctionData();
+        });
     }, []);
+
+    // Process auction data whenever the auction state changes
+    useEffect(() => {
+        if (Object.keys(auctionState.auctions || {}).length > 0) {
+            processAuctionData();
+        }
+    }, [auctionState]);
 
     return (
         <Card
             title="Public Auctions"
             extra={
-                <Button icon={<ReloadOutlined />} onClick={fetchAuctionData} loading={loading}>
+                <Button icon={<ReloadOutlined />} onClick={refreshData} loading={loading}>
                     Refresh
                 </Button>
             }
         >
             <List
-                dataSource={publicAuctions}
-                renderItem={(auction) => (
-                    <AuctionCard
-                        key={auction.auctionId}
-                        auctionId={auction.auctionId}
-                        data={auction}
-                        loading={loading}
-                    />
+                dataSource={Object.entries(auctionData)}
+                renderItem={([auctionId, data]) => (
+                    <div>
+                        <Space style={{ marginBottom: '8px' }}>
+                            <Text type="secondary">Auction ID: {data.displayId}</Text>
+                        </Space>
+                        <AuctionCard auctionId={auctionId} data={data} loading={loading} />
+                    </div>
                 )}
                 locale={{ emptyText: 'No public auctions found' }}
             />
