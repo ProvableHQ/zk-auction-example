@@ -8,6 +8,9 @@ import { InviteForm } from './InviteForm';
 import { Transaction, WalletAdapterNetwork } from '@demox-labs/aleo-wallet-adapter-base';
 import { PROGRAM_ID } from '../core/constants';
 import { useAuctionState } from './AuctionState.jsx';
+import {
+    CheckOutlined
+} from '@ant-design/icons';
 
 
 const { Title, Text } = Typography;
@@ -24,13 +27,15 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
     const startingBid = data.startingBid;
     const isPublic = data.isPublic;
     const auctioneer = data.auctioneer;
-    const matchingPrivateBids = data.privateBids.filter(bid => bid.auctionId === auctionId);
+    const privateBids = data.privateBids.filter(bid => bid.auctionId === auctionId);
     const publicBids = data.publicBids;
+    const active = data.active;
+    const winner = data.winner;
     const totalBids = (data.privateBids?.length || 0) + (data.publicBids?.length || 0);
     const ticketRecord = data.ticketRecord;
     const displayId = data.displayId || auctionId.substring(0, 20) + '...';
 
-    console.log('Matching private bids:', matchingPrivateBids);
+    console.log('Matching private bids:', privateBids);
 
     const [metadata, setMetadata] = useState({ image: '', name: '' });
     const [bidFormVisible, setBidFormVisible] = useState(false);
@@ -86,7 +91,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
     const renderBidButtons = () => {
         return (
             <Row gutter={[8, 8]} justify="end">
-                {(bidTypesAccepted === '0field' || bidTypesAccepted === '2field') && (
+                {!winner && (bidTypesAccepted === '0field' || bidTypesAccepted === '2field') && (
                     <Col>
                         <Button 
                             type="primary"
@@ -96,7 +101,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                         </Button>
                     </Col>
                 )}
-                {(bidTypesAccepted === '1field' || bidTypesAccepted === '2field') && (
+                {!winner && (bidTypesAccepted === '1field' || bidTypesAccepted === '2field') && (
                     <Col>
                         <Button 
                             type="default"
@@ -137,7 +142,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
         });
 
         // Check private bids
-        matchingPrivateBids.forEach(bid => {
+        privateBids.forEach(bid => {
             const amount = parseInt(bid.amount);
             if (amount > highestAmount) {
                 highestAmount = amount;
@@ -173,7 +178,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                 PROGRAM_ID,
                 isPrivate ? 'select_winner_private' : 'select_winner_public',
                 inputs,
-                0.276, // Fee in credits
+                100000, // Fee in credits
                 false,
             );
 
@@ -187,10 +192,9 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
     const renderBidCard = (bid, isPrivate = true) => {
         const bidAmount = parseInt(bid.amount);
         const isHighestBid = bidAmount === findHighestBidAmount();
+        const isWinner = !!bid.winner;
+        console.log(`BidId: ${bid.id}`, bid);
 
-        console.log('Bid:', bid);
-        console.log('Is private:', isPrivate);
-        
         return (
             <Card size="small" style={{ marginBottom: '8px' }}>
                 <Row justify="space-between" align="middle">
@@ -200,13 +204,16 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                             <Text type="secondary">
                                 Bid ID: {bid.id.substring(0, 21)}..
                             </Text>
-                            {isHighestBid && (
+                            {!isWinner && isHighestBid && (
                                 <Tag color="#87d068">Highest Bid</Tag>
+                            )}
+                            {isWinner && (
+                                <Tag color="#87d068">Winner</Tag>
                             )}
                         </Space>
                     </Col>
                     <Col>
-                        {isOwner() && isHighestBid && (
+                        {!isWinner && isOwner() && isHighestBid && (
                             <Button 
                                 type="primary"
                                 size="small"
@@ -228,6 +235,9 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
             </Tag>
             {isOwner() && (
                 <Tag color="#52c41a">Your Auction</Tag>
+            )}
+            {!active && (
+                <Tag color="#f56042" icon={<CheckOutlined/>}>Bidding Closed</Tag>
             )}
         </Space>
     );
@@ -298,7 +308,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                             </Row>
                             <Row gutter={[16, 16]} style={{ marginTop: '16px' }}>
                                 <Col span={8}>
-                                    <Statistic title="Private Bids" value={matchingPrivateBids.length || totalBids - publicBids.length} />
+                                    <Statistic title="Private Bids" value={privateBids.length || totalBids - publicBids.length} />
                                 </Col>
                                 <Col span={8}>
                                     <Statistic title="Public Bids" value={publicBids.length} />
@@ -317,7 +327,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                     <Tabs defaultActiveKey="1">
                         <TabPane tab="Private Bids" key="1">
                             <List
-                                dataSource={matchingPrivateBids}
+                                dataSource={privateBids}
                                 renderItem={bid => renderBidCard(bid, true)}
                                 locale={{ emptyText: 'No private bids yet' }}
                             />

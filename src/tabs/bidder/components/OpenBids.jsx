@@ -4,7 +4,7 @@ import { ReloadOutlined } from '@ant-design/icons';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 import { useAuctionState } from '../../../components/AuctionState.jsx';
 import { filterVisibility } from '../../../core/processing';
-import { fieldsToString } from '../../../core/encoder';
+import {convertFieldToString, fieldsToString} from '../../../core/encoder';
 
 const { Text } = Typography;
 
@@ -87,7 +87,7 @@ export const OpenBids = () => {
                     auctionId: auctionId,
                     amount: bid.amount,
                     isPublic: bid.isPublic,
-                    name: auction.name,
+                    name: convertFieldToString(auction.name),
                     metadata: auction.metadata,
                     auctioneer: auction.auctioneer,
                     highestBid: auction.highestBid || 0,
@@ -130,6 +130,7 @@ export const OpenBids = () => {
                         startingBid: auction.startingBid,
                         isPublicAuction: auction.isPublic,
                         active: !auction.winner,
+                        isWinner: auction.winner === bidId,
                         redeemed: auction.redeemed,
                         originalRecord: record
                     };
@@ -197,6 +198,7 @@ export const OpenBids = () => {
                 renderItem={([bidId, bid]) => {
                     const shortAuctionId = `${bid.auctionId.substring(0, 20)}...field`;
                     const auctionImage = auctionMetadata[bid.auctionId]?.image;
+                    console.log("Bid data: ", bid);
 
                     return (
                         <Card size="small" style={{ marginBottom: 16 }}>
@@ -235,6 +237,12 @@ export const OpenBids = () => {
                                             <Tag color={bid.active ? 'green' : 'red'}>
                                                 {bid.active ? 'Open' : 'Closed'}
                                             </Tag>
+                                            {bid.isWinner && (
+                                                <Tag color='green'>
+                                                    {'Winner'}
+                                                </Tag>
+                                            )
+                                            }
                                         </Space>
                                     </Space>
                                 </Col>

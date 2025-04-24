@@ -2,7 +2,8 @@ import { createBrowserRouter } from "react-router-dom";
 import Main from "./main.jsx";
 import { CreateAuction } from "./tabs/auctioneer/CreateAuction";
 import { OpenAuctions } from "./tabs/auctioneer/OpenAuctions";
-import { BidExplorer } from "./tabs/bidder/BidExplorer.jsx";
+import { MyBids } from "./tabs/bidder/MyBids.jsx";
+import { BidFeed} from "./tabs/bidder/BidFeed.jsx";
 import Homepage from "./pages/Homepage";
 import { AuctionExplorer } from './tabs/bidder/AuctionExplorer';
 
@@ -25,12 +26,20 @@ export const router = createBrowserRouter([
                 ),
             },
             {
-                path: "/bidder",
+                path: "/marketplace",
                 element: (
                     <>
-                        <AuctionExplorer />
-                        <br />
-                        <BidExplorer />
+                        <BidFeed/>
+                        <br/>
+                        <AuctionExplorer/>
+                    </>
+                ),
+            },
+            {
+                path: "/bids",
+                element: (
+                    <>
+                        <MyBids />
                     </>
                 ),
             },

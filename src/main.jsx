@@ -7,7 +7,7 @@ import { WalletWrapper } from "./components/WalletWrapper.jsx";
 
 import {
     AuditOutlined,
-    CodeOutlined,
+    OrderedListOutlined,
     SwapOutlined,
 } from "@ant-design/icons";
 import { WasmLoadingMessage } from "./components/WasmLoadingMessage.jsx";
@@ -21,13 +21,18 @@ const menuItems = [
         icon: <AuditOutlined />,
     },
     {
-        label: <Link to="/bidder">Marketplace</Link>,
-        key: "bidder",
+        label: <Link to="/marketplace">Marketplace</Link>,
+        key: "marketplace",
         icon: <SwapOutlined />,
+    },
+    {
+        label: <Link to="/bids">My Bids</Link>,
+        key: "bids",
+        icon: <OrderedListOutlined />,
     },
 ];
 function Main() {
-    const [menuIndex, setMenuIndex] = useState("/bidder");
+    const [menuIndex, setMenuIndex] = useState("/auctioneer");
 
     const navigate = useNavigate();
     const location = useLocation();

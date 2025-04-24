@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { List, Card, Typography, Space, Button, Row, Col } from 'antd';
+import {List, Card, Typography, Space, Button, Row, Col, Tag} from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 import { useAuctionState } from '../../../components/AuctionState.jsx';
 import { filterVisibility } from '../../../core/processing';
-import { fieldsToString } from '../../../core/encoder';
+import {convertFieldToString, fieldsToString} from '../../../core/encoder';
 
 const { Text } = Typography;
 
@@ -118,60 +118,84 @@ export const ActiveBids = () => {
                     Refresh
                 </Button>
             }
+            style={{ width: '100%', maxWidth: '1200px', margin: '0 auto' }}
         >
-            <List
-                grid={{ gutter: 16, column: 1 }}
-                dataSource={bids}
-                loading={loading}
-                style={{ 
-                    maxHeight: '600px', 
-                    overflowY: 'auto',
-                    scrollBehavior: 'smooth'
-                }}
-                renderItem={bid => {
-                    const auction = auctionMetadata[bid.auctionId];
-                    const shortAuctionId = `${bid.auctionId.substring(0, 20)}...field`;
+            <div style={{ 
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                whiteSpace: 'nowrap',
+                padding: '16px 0',
+                scrollBehavior: 'smooth',
+                maxWidth: '100%'
+            }}>
+                <List
+                    dataSource={bids}
+                    loading={loading}
+                    style={{ 
+                        display: 'flex',
+                        flexDirection: 'row',
+                        flexWrap: 'nowrap',
+                        width: 'max-content',
+                        minWidth: '100%'
+                    }}
+                    renderItem={bid => {
+                        const auction = auctionMetadata[bid.auctionId];
+                        const shortAuctionId = `${bid.auctionId.substring(0, 10)}..`;
+                        const shortBidId = `${bid.id.substring(0, 10)}..`;
+                        const isPrivate = !bid.name;
 
-                    return (
-                        <List.Item>
-                            <Card size="small">
-                                <Row align="middle" gutter={16}>
-                                    {auction && (
-                                        <Col span={4}>
-                                            <img 
-                                                src={auction.image} 
-                                                alt="Auction item"
-                                                style={{ 
-                                                    width: '50px',
-                                                    height: '50px',
-                                                    objectFit: 'cover',
-                                                    borderRadius: '4px'
-                                                }}
-                                            />
-                                        </Col>
-                                    )}
-                                    <Col span={auction ? 20 : 24}>
-                                        <Space direction="vertical" size={0}>
-                                            <Text strong>
-                                                Bid Amount: {bid.amount / 1_000_000} ALEO
-                                            </Text>
-                                            <Text type="secondary" style={{ fontSize: '12px' }}>
-                                                Auction ID: {shortAuctionId}
-                                            </Text>
-                                            {bid.name && (
-                                                <Text type="secondary">
-                                                    Auction: {bid.name}
+                        return (
+                            <div style={{ 
+                                display: 'inline-block',
+                                width: '300px',
+                                marginRight: '16px',
+                                verticalAlign: 'top'
+                            }}>
+                                <Card size="small" style={{ height: '100%', minHeight: '120px' }}>
+                                    <Row align="middle" gutter={16}>
+                                        {auction && (
+                                            <Col span={8}>
+                                                <img 
+                                                    src={auction.image} 
+                                                    alt="Auction item"
+                                                    style={{ 
+                                                        width: '100%',
+                                                        height: '50px',
+                                                        objectFit: 'cover',
+                                                        borderRadius: '4px'
+                                                    }}
+                                                />
+                                            </Col>
+                                        )}
+                                        <Col span={auction ? 16 : 24}>
+                                            <Space direction="vertical" size={0}>
+                                                {bid.name && (
+                                                    <Text strong ellipsis>
+                                                        Auction: {convertFieldToString(bid.name).substring(0,16) + ".."}
+                                                    </Text>
+                                                )}
+                                                <Text type="secondary" style={{ fontSize: '12px' }}>
+                                                    Auction ID: {shortAuctionId}
                                                 </Text>
-                                            )}
-                                        </Space>
-                                    </Col>
-                                </Row>
-                            </Card>
-                        </List.Item>
-                    );
-                }}
-                locale={{ emptyText: 'No active bids found' }}
-            />
+                                                <Text type="secondary" style={{ fontSize: '12px' }}>
+                                                    Bid ID: {shortBidId}
+                                                </Text>
+                                                <Text strong>
+                                                    {bid.amount / 1_000_000} ALEO
+                                                </Text>
+                                                {isPrivate && (
+                                                    <Tag color="red">Private Auction</Tag>
+                                                )}
+                                            </Space>
+                                        </Col>
+                                    </Row>
+                                </Card>
+                            </div>
+                        );
+                    }}
+                    locale={{ emptyText: 'No active bids found' }}
+                />
+            </div>
         </Card>
     );
 }; 

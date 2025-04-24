@@ -117,18 +117,14 @@ function parsePublicAuctionState(state, publicAuctions) {
             fn: (acc) => {
                 for (const [id, auction] of Object.entries(acc)) {
                     const prev = state.auctions?.[id] ?? {};
-
-                    const winner = prev.winner ?? auction.winner ?? "";
-                    const redeemed = prev.redeemed ?? auction.redeemed ?? false;
-                    const active = prev.active ?? (winner ? false : true);
                     const activeTicket = prev.activeTicket ?? null;
 
                     acc[id] = {
                         ...auction,
                         id,
-                        winner,
-                        redeemed,
-                        active,
+                        winner: auction.winner,
+                        redeemed: auction.redeemed,
+                        active: !auction.winner,
                         activeTicket,
                         privateBids: prev.privateBids ?? new Set(),
                         publicBids: prev.publicBids ?? new Set(),

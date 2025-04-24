@@ -39,6 +39,7 @@ export const OpenAuctions = () => {
                         auctionId: bid.auctionId,
                         bidder: bid.owner,
                         publicKey: bid.publicKey,
+                        winner: bid.winner,
                         id: bid.id,
                     }));
 
@@ -56,9 +57,12 @@ export const OpenAuctions = () => {
                             auctionId: f(record.data.bid.auction_id),
                             amount: parseInt(f(record.data.bid.amount).replace('u64', '')),
                             id: f(record.data.bid_id),
-                            bidder: f(record.data.bid.bid_public_key)
+                            bidder: f(record.data.bid.bid_public_key),
+                            winner: f(record.data.bid_id) === auction.winner,
                         };
                     });
+
+                console.log(`Auction ${auctionId} - winner: ${auction.winner} - active: ${auction.active}`);
 
                 // Create the data object for AuctionCard
                 processedData[auctionId] = {
@@ -70,7 +74,8 @@ export const OpenAuctions = () => {
                     privacy: auction.privacy,
                     invited: auction.invited,
                     redeemed: auction.redeemed,
-                    active: !auction.winner,
+                    active: auction.active,
+                    winner: auction.winner,
                     startingBid: auction.startingBid,
                     auctionId,
                     isPublic: auction.privacy === "1field" || false,
@@ -124,7 +129,7 @@ export const OpenAuctions = () => {
 
     return (
         <Card
-            title="My Open Auctions"
+            title="My Auctions"
             extra={
                 <Button
                     icon={<ReloadOutlined />}
