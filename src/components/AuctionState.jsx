@@ -66,7 +66,7 @@ export const AuctionState = ({ children }) => {
     const updateAuctionStateFromRecords = (records) => {
         setAuctionState(prev => {
             const privateState = updateStateFromRecords(prev, records);
-            const merged = {
+            return {
                 ...prev,
                 ...privateState,
                 auctions: {
@@ -82,7 +82,6 @@ export const AuctionState = ({ children }) => {
                 userBidIds: new Set([...prev.userBidIds, ...privateState.userBidIds]),
                 bidsOnUserAuctions: new Set([...prev.bidsOnUserAuctions, ...privateState.bidsOnUserAuctions]),
             };
-            return merged;
         });
         console.log("Updated auction state after private:", auctionState);
     }
@@ -105,8 +104,17 @@ export const AuctionState = ({ children }) => {
     const updateAuctionStateOnConnect = async () => {
         if (!auctionState.hasLoaded) {
             await updateAuctionState(true);
-            auctionState.hasLoaded = true;
         }
+        setAuctionState(prev => ({
+            ...prev,
+            auctions: {
+                ...prev.auctions,
+            },
+            bids: {
+                ...prev.bids,
+            },
+            hasLoaded: true,
+        }));
     }
 
     const getAuctionState = () => {

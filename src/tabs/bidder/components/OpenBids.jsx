@@ -48,7 +48,6 @@ export const OpenBids = () => {
         setLoading(true);
         try {
             const processedData = {};
-            console.log("Processing bid data...", auctionState);
 
             // Get bids made by the current user
             const userBids = Object.values(auctionState.bids || {})
@@ -167,7 +166,6 @@ export const OpenBids = () => {
         // Update the auction state when the component mounts
         if (connected) {
             updateAuctionStateOnConnect().then(() => {
-                console.log("Auction state updated for OpenBids.", auctionState);
                 processBidData();
             });
         }

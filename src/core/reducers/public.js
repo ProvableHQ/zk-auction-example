@@ -172,6 +172,7 @@ function parsePublicBidState(state, publicBids) {
                     amount: parseInt(data.amount.replace('u64', '')),
                     auctionId: data.auction_id,
                     isPublic: true,
+                    publicKey: data.bid_public_key,
                     owner: "",
                 };
                 return acc;

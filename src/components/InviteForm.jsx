@@ -10,6 +10,8 @@ export const InviteForm = ({ visible, onCancel, ticketRecord }) => {
 
     const handleSubmit = async (values) => {
         try {
+            const inputs = [ticketRecord, values.inviteeAddress];
+            console.log("Inputs for Invite:", inputs);
             const transaction = Transaction.createTransaction(
                 publicKey,
                 WalletAdapterNetwork.TestnetBeta,

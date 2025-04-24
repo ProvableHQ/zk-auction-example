@@ -229,6 +229,7 @@ function newBidFromReceipt(state, record) {
         amount: f(record.data.amount),
         isPublic: false,
         owner: record.owner,
+        publicKey: f(record.data.bid_public_key),
         id: f(record.data.bid_id),
     };
 }

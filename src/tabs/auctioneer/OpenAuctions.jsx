@@ -38,6 +38,7 @@ export const OpenAuctions = () => {
                         amount: bid.amount,
                         auctionId: bid.auctionId,
                         bidder: bid.owner,
+                        publicKey: bid.publicKey,
                         id: bid.id,
                     }));
 

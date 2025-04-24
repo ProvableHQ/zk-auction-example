@@ -18,8 +18,6 @@ export const PublicAuctions = () => {
         try {
             const processedData = {};
 
-            console.log("Processing auction data...", auctionState);
-            
             // Get public auctions
             const publicAuctions = Object.entries(auctionState.auctions || {})
                 .filter(([_, auction]) => auction.isPublic);

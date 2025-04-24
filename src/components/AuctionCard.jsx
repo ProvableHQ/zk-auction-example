@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Image, Statistic, Typography, Tabs, List, Button, Space, Tag, Divider } from 'antd';
 import { convertFieldToString, fieldsToString } from '../core/encoder.js';
-import { filterVisibility } from '../core/processing.js';
+import { filterVisibility as f} from '../core/processing.js';
 import { BidForm } from './BidForm';
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { InviteForm } from './InviteForm';
-import { Transaction } from '@demox-labs/aleo-wallet-adapter-base';
+import { Transaction, WalletAdapterNetwork } from '@demox-labs/aleo-wallet-adapter-base';
 import { PROGRAM_ID } from '../core/constants';
+import { useAuctionState } from './AuctionState.jsx';
 
 
 const { Title, Text } = Typography;
@@ -35,13 +36,14 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
     const [bidFormVisible, setBidFormVisible] = useState(false);
     const [bidType, setBidType] = useState(null);
     const [inviteFormVisible, setInviteFormVisible] = useState(false);
+    const { auctionState } = useAuctionState();
 
     useEffect(() => {
         const fetchMetadata = async () => {
             try {
                 const metadataUrl = fieldsToString(
                     itemMetadata.map(image =>
-                        BigInt(filterVisibility(image).replace('field', ''))
+                        BigInt(f(image).replace('field', ''))
                     )
                 );
                 const res = await fetch(metadataUrl);
@@ -147,16 +149,19 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
 
     const handleSelectWinner = async (bid, isPrivate) => {
         try {
+            console.log("privateBids", auctionState.privateBids);
             const inputs = isPrivate ? 
                 // Inputs for private winner selection
                 [
                     ticketRecord,     // Use original AuctionTicket record
-                    bid.originalRecord, // Use original PrivateBid record
+                    auctionState.privateBids.filter(privateBid => {
+                        return (f(privateBid.data.bid.auction_id) === bid.auctionId && f(privateBid.data.bid_id) === bid.id)
+                    })[0],
                 ] :
                 // Inputs for public winner selection
                 [
                     ticketRecord,     // Use original AuctionTicket record
-                    bid,
+                    `{\n  amount: ${bid.amount}u64,\n  auction_id: ${bid.auctionId},\n  bid_public_key: ${bid.publicKey}\n}`, // Use original PublicBid record
                     bid.id,          // winning_bid_id
                 ];
             
@@ -164,10 +169,12 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
 
             const transaction = Transaction.createTransaction(
                 publicKey,
+                WalletAdapterNetwork.TestnetBeta,
                 PROGRAM_ID,
                 isPrivate ? 'select_winner_private' : 'select_winner_public',
                 inputs,
                 0.276, // Fee in credits
+                false,
             );
 
             const result = await requestTransaction(transaction);
