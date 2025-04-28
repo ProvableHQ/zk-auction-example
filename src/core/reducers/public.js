@@ -231,7 +231,9 @@ async function updatePublicState(state) {
     ]);
 
     const updatedWithAuctions = parsePublicAuctionState(state, auctionData);
-    return parsePublicBidState(updatedWithAuctions, bidData);
+    const publicBidState = parsePublicBidState(updatedWithAuctions, bidData);
+    console.log("Public Bid State:", publicBidState);
+    return publicBidState;
 }
 
 export { parsePublicBidState, fetchPublicState, parsePublicAuctionState, updatePublicState }

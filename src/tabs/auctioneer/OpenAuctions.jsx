@@ -30,60 +30,11 @@ export const OpenAuctions = () => {
             for (const [auctionId, auction] of userAuctions) {
                 // Skip redeemed auctions
                 if (auction.redeemed) continue;
-                
-                // Get public bids for this auction
-                const publicBids = Object.values(auctionState.bids || {})
-                    .filter(bid => bid.auctionId === auctionId && bid.isPublic)
-                    .map(bid => ({
-                        amount: bid.amount,
-                        auctionId: bid.auctionId,
-                        bidder: bid.owner,
-                        publicKey: bid.publicKey,
-                        winner: bid.winner,
-                        id: bid.id,
-                    }));
-
-                // Get private bids for this auction
-                const privateBids = auctionState.privateBids
-                    .filter(record => {
-                        try {
-                            return f(record.data.bid.auction_id) === auctionId;
-                        } catch (e) {
-                            return false;
-                        }
-                    })
-                    .map(record => {
-                        return {
-                            auctionId: f(record.data.bid.auction_id),
-                            amount: parseInt(f(record.data.bid.amount).replace('u64', '')),
-                            id: f(record.data.bid_id),
-                            bidder: f(record.data.bid.bid_public_key),
-                            winner: f(record.data.bid_id) === auction.winner,
-                        };
-                    });
 
                 console.log(`Auction ${auctionId} - winner: ${auction.winner} - active: ${auction.active}`);
 
                 // Create the data object for AuctionCard
-                processedData[auctionId] = {
-                    ticketRecord: auction.activeTicket,
-                    name: auction.name,
-                    metadata: auction.metadata,
-                    auctioneer: auction.auctioneer,
-                    bidTypes: auction.bidTypes,
-                    privacy: auction.privacy,
-                    invited: auction.invited,
-                    redeemed: auction.redeemed,
-                    active: auction.active,
-                    winner: auction.winner,
-                    startingBid: auction.startingBid,
-                    auctionId,
-                    isPublic: auction.privacy === "1field" || false,
-                    highestBid: auction.highestBid || 0,
-                    totalBids: auction.bidCount || 0,
-                    publicBids,
-                    privateBids
-                };
+                processedData[auctionId] = auction;
             }
 
             console.log("Processed Data: ", processedData);

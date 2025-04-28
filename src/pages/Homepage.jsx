@@ -21,7 +21,7 @@ const Homepage = () => {
                 <Link
                     target="_blank"
                     rel="noopener noreferrer"
-                    to="/bidder"
+                    to="/marketplace"
                 >
                     <button className="button">
                         {" "}

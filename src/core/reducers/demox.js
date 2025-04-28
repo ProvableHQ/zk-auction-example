@@ -1,6 +1,7 @@
 import { filterVisibility as f } from "../processing.js";
 
 function updateStateFromRecords(state, records) {
+    console.log("Existing state", state);
     const auctionTickets = records.filter(record => record.recordName === "AuctionTicket");
     const bidReceipts = records.filter(record => record.recordName === "BidReceipt");
     const bidInvites = records.filter(record => record.recordName === "BidInvite");
@@ -20,6 +21,7 @@ function updateStateFromRecords(state, records) {
 
     // Find user bid IDs from bid receipts.
     const [bids, bidsOnUserAuctions, userBidIds] = processBidReceipts(state, bidReceipts);
+    console.log("User bids: ", bids);
 
     // Create a merged auctions object that preserves existing state
     const mergedAuctions = { ...state.auctions };
@@ -77,12 +79,12 @@ function updateStateFromRecords(state, records) {
     }
 
     // Return the auction state derived from the records.
-    return {
+    const reducedState = {
         ...state,
         auctions: mergedAuctions,
         bids: {
             ...state.bids,
-            bids,
+            ...bids,
         },
         auctionTickets,
         bidInvites,
@@ -93,6 +95,8 @@ function updateStateFromRecords(state, records) {
         userAuctionIds,
         userBidIds,
     };
+    console.log("Reduced private state", reducedState);
+    return reducedState;
 }
 
 function processAuctionInvites (state, invites) {
@@ -119,6 +123,7 @@ function processBidReceipts (state, records) {
     const userBidIds = new Set(state.userBidIds);
     const bidsOnUserAuctions = new Set(state.bidsOnUserAuctions);
     const bids = { ...state.bids };
+    console.log("Bids prior to processing", bids);
     records.forEach(record => {
         try {
             const bidId = f(record.data.bid_id);
@@ -136,6 +141,7 @@ function processBidReceipts (state, records) {
             console.error(error);
         }
     });
+    console.log("bids after processing", bids);
     return [bids, bidsOnUserAuctions, userBidIds];
 }
 
@@ -226,7 +232,7 @@ function newBidFromReceipt(state, record) {
     // Create a bid object from the state within the record.
     return {
         auctionId: f(record.data.auction_id),
-        amount: f(record.data.amount),
+        amount: parseInt(f(record.data.bid.amount).replace("u64", "")),
         isPublic: false,
         owner: record.owner,
         publicKey: f(record.data.bid_public_key),
