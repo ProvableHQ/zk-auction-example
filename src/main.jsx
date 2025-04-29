@@ -1,5 +1,5 @@
 import "./App.css";
-import { useEffect, useState, React } from "react";
+import React, { useEffect, useState } from "react";
 import { App, ConfigProvider, Layout, Menu, Switch, theme } from "antd";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AuctionState } from "./components/AuctionState.jsx";
