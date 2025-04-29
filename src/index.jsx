@@ -8,7 +8,9 @@ import { router } from "./routing.jsx";
 const container = document.getElementById("root");
 const root = createRoot(container);
 root.render(
-    <RouterProvider router={router} />
+    <React.StrictMode>
+        <RouterProvider router={router} />
+    </React.StrictMode>,
 );
 
 const reportWebVitals = (onPerfEntry) => {
