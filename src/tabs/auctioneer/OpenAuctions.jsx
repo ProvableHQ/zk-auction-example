@@ -21,8 +21,6 @@ export const OpenAuctions = () => {
         try {
             const processedData = {};
 
-            console.log("Processing auction data...", auctionState);
-            
             // Get auctions owned by the current user
             const userAuctions = Object.entries(auctionState.auctions || {})
                 .filter(([_, auction]) => auction.auctioneer === publicKey);
@@ -31,13 +29,10 @@ export const OpenAuctions = () => {
                 // Skip redeemed auctions
                 if (auction.redeemed) continue;
 
-                console.log(`Auction ${auctionId} - winner: ${auction.winner} - active: ${auction.active}`);
-
                 // Create the data object for AuctionCard
                 processedData[auctionId] = auction;
             }
 
-            console.log("Processed Data: ", processedData);
             setAuctionData(processedData);
         } catch (error) {
             console.error('Error processing auction data:', error);
@@ -61,15 +56,6 @@ export const OpenAuctions = () => {
             setLoading(false);
         }
     };
-
-    useEffect(() => {
-        if (connected) {
-            updateAuctionStateOnConnect().then(() => {
-                console.log("Auction state updated.", auctionState);
-                processAuctionData();
-            });
-        }
-    }, [connected]);
 
     // Process auction data whenever the auction state changes
     useEffect(() => {

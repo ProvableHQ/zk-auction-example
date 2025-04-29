@@ -5,6 +5,7 @@ import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 import { useAuctionState } from '../../../components/AuctionState.jsx';
 import { filterVisibility } from '../../../core/processing';
 import {convertFieldToString, fieldsToString} from '../../../core/encoder';
+import {WalletMultiButton} from "@demox-labs/aleo-wallet-adapter-reactui";
 
 const { Text } = Typography;
 
@@ -59,6 +60,11 @@ export const OpenBids = () => {
                 </Button>
             }
         >
+            {!connected ? (
+                    <>
+                        <WalletMultiButton />
+                    </>
+                ) : (
             <List
                 dataSource={Object.values(bids)}
                 renderItem={bid => {
@@ -120,7 +126,7 @@ export const OpenBids = () => {
                     );
                 }}
                 locale={{ emptyText: connected ? 'No open bids found' : 'Please connect your wallet' }}
-            />
+            />)}
         </Card>
     );
 }; 
