@@ -24,6 +24,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
     const [bidFormVisible, setBidFormVisible] = useState(false);
     const [bidType, setBidType] = useState(null);
     const [inviteFormVisible, setInviteFormVisible] = useState(false);
+    const {connected} = useWallet();
 
     // Local hooks.
     const { publicKey, requestTransaction } = useWallet();
@@ -254,12 +255,12 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                 auctionData={data}
                 bidType={bidType}
             />
-            
-            <InviteForm
+
+            {connected && <InviteForm
                 visible={inviteFormVisible}
                 onCancel={() => setInviteFormVisible(false)}
                 ticketRecord={data.ticketRecord}
-            />
+            />}
         </Card>
     );
 };

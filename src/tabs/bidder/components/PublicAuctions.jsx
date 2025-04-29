@@ -85,10 +85,8 @@ export const PublicAuctions = () => {
 
     useEffect(() => {
         // Update the auction state when the component mounts
-        updateAuctionStateOnConnect().then(() => {
-            console.log("Auction state updated for PublicAuctions.", auctionState);
-            processAuctionData();
-        });
+        updatePublicAuctionState();
+        processAuctionData();
     }, []);
 
     // Process auction data whenever the auction state changes
@@ -111,9 +109,6 @@ export const PublicAuctions = () => {
                 dataSource={Object.entries(auctionData)}
                 renderItem={([auctionId, data]) => (
                     <div>
-                        <Space style={{ marginBottom: '8px' }}>
-                            <Text type="secondary">Auction ID: {data.displayId}</Text>
-                        </Space>
                         <AuctionCard auctionId={auctionId} data={data} loading={loading} />
                     </div>
                 )}
