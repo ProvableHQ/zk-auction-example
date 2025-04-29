@@ -11,7 +11,7 @@ const { Text } = Typography;
 export const OpenBids = () => {
     // Define local state.
     const [loading, setLoading] = useState(false);
-    const [bidData, setBidData] = useState({});
+    const [bids, setBids] = useState({});
 
     // Get info from hooks.
     const { connected, publicKey } = useWallet();
@@ -21,7 +21,7 @@ export const OpenBids = () => {
     const processBidData = async () => {
         const userBids = getUserBids();
         const bidsWithMetadata = await addAuctionMetadataToBids(userBids);
-       setBidData(bidsWithMetadata);
+       setBids(bidsWithMetadata);
     };
 
     const refreshData = async () => {
@@ -60,10 +60,11 @@ export const OpenBids = () => {
             }
         >
             <List
-                dataSource={Object.entries(bidData)}
-                renderItem={([bidId, bid]) => {
+                dataSource={Object.values(bids)}
+                renderItem={bid => {
                     const shortAuctionId = `${bid.auctionId.substring(0, 20)}...field`;
                     const auctionImage = bid?.metadata?.image;
+                    console.log("Auction image is", auctionImage);
 
                     return (
                         <Card size="small" style={{ marginBottom: 16 }}>

@@ -10,73 +10,15 @@ const { Text } = Typography;
 
 export const ActiveBids = () => {
     const { connected } = useWallet();
-    const { auctionState, updateAuctionStateOnConnect, updatePublicAuctionState } = useAuctionState();
+    const { auctionState, addAuctionMetadataToBids, updatePublicAuctionState } = useAuctionState();
     const [loading, setLoading] = useState(false);
     const [bids, setBids] = useState([]);
-    const [auctionMetadata, setAuctionMetadata] = useState({});
 
-    // Function to fetch metadata for an auction
-    const fetchAuctionMetadata = async (auctionId, metadata) => {
-        if (!metadata) return;
-        
-        try {
-            const metadataUrl = fieldsToString(
-                metadata.map(field => 
-                    BigInt(filterVisibility(field).replace('field', ''))
-                )
-            );
-            
-            const response = await fetch(metadataUrl);
-            const json = await response.json();
-            const parsedMetadata = JSON.parse(json);
-            
-            if (parsedMetadata.image) {
-                setAuctionMetadata(prev => ({
-                    ...prev,
-                    [auctionId]: {
-                        ...prev[auctionId],
-                        image: parsedMetadata.image
-                    }
-                }));
-            }
-        } catch (error) {
-            console.warn('Error fetching metadata for auction:', auctionId, error);
-        }
-    };
-
-    const processBidData = () => {
-        setLoading(true);
-        try {
-            // Get all public bids from the auction state
-            const publicBids = Object.values(auctionState.bids || {})
-                .filter(bid => bid.isPublic)
-                .slice(0, 100); // Limit to 100 bids
-            
-            // Process bids and fetch metadata for each auction
-            const processedBids = publicBids.map(bid => {
-                const auctionId = bid.auctionId;
-                const auction = auctionState.auctions[auctionId];
-                
-                // Fetch metadata for this auction if available
-                if (auction && auction.metadata) {
-                    fetchAuctionMetadata(auctionId, auction.metadata);
-                }
-                
-                return {
-                    id: bid.id,
-                    amount: bid.amount,
-                    auctionId: auctionId,
-                    publicKey: bid.publicKey,
-                    name: auction ? auction.name : null
-                };
-            });
-            
-            setBids(processedBids);
-        } catch (error) {
-            console.error('Error processing bid data:', error);
-        } finally {
-            setLoading(false);
-        }
+    const processBidData = async () => {
+        const bids = auctionState.bids || {};
+        const bidsWithMetadata = await addAuctionMetadataToBids(bids);
+        console.log('bidsWithMetadata', bidsWithMetadata);
+        setBids(bidsWithMetadata);
     };
 
     const refreshData = async () => {
@@ -94,9 +36,7 @@ export const ActiveBids = () => {
 
     // Process bid data whenever the auction state changes
     useEffect(() => {
-        if (Object.keys(auctionState.bids || {}).length > 0) {
-            processBidData();
-        }
+        processBidData();
     }, [auctionState]);
 
     return (
@@ -122,7 +62,7 @@ export const ActiveBids = () => {
                 maxWidth: '100%'
             }}>
                 <List
-                    dataSource={bids}
+                    dataSource={Object.values(bids)}
                     loading={loading}
                     style={{ 
                         display: 'flex',
@@ -132,10 +72,14 @@ export const ActiveBids = () => {
                         minWidth: '100%'
                     }}
                     renderItem={bid => {
-                        const auction = auctionMetadata[bid.auctionId];
+                        console.log('bid', bid);
                         const shortAuctionId = `${bid.auctionId.substring(0, 10)}..`;
                         const shortBidId = `${bid.id.substring(0, 10)}..`;
-                        const isPrivate = !bid.name;
+                        let auctionName = "";
+                        const isPrivate = !bid.auctionName;
+                        if (!isPrivate) {
+                            auctionName = auctionName.substring(0,16) + "..";
+                        }
 
                         return (
                             <div style={{ 
@@ -146,10 +90,10 @@ export const ActiveBids = () => {
                             }}>
                                 <Card size="small" style={{ height: '100%', minHeight: '120px' }}>
                                     <Row align="middle" gutter={16}>
-                                        {auction && (
+                                        {bid.metadata && (
                                             <Col span={8}>
                                                 <img 
-                                                    src={auction.image} 
+                                                    src={bid.metadata.image}
                                                     alt="Auction item"
                                                     style={{ 
                                                         width: '100%',
@@ -160,11 +104,11 @@ export const ActiveBids = () => {
                                                 />
                                             </Col>
                                         )}
-                                        <Col span={auction ? 16 : 24}>
+                                        <Col span={bid ? 16 : 24}>
                                             <Space direction="vertical" size={0}>
                                                 {bid.name && (
                                                     <Text strong ellipsis>
-                                                        Auction: {convertFieldToString(bid.name).substring(0,16) + ".."}
+                                                        Auction: {auctionName}
                                                     </Text>
                                                 )}
                                                 <Text type="secondary" style={{ fontSize: '12px' }}>

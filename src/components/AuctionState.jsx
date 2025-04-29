@@ -76,7 +76,7 @@ export const AuctionState = ({ children }) => {
     // Get auction metadata from the cache or fetch it if not cached.
     const getAuctionMetadata = async (auctionId) => {
         const metadata = auctionState.auctions[auctionId]?.metadata;
-        if (!metadata) return {};
+        if (!metadata || Object.keys(metadata).length === 0) return {};
 
         const metadataKey = fieldsToString(
             metadata.map(field =>
@@ -166,8 +166,20 @@ export const AuctionState = ({ children }) => {
         // Properly iterate over the actual bid objects
         for (const bid of Object.values(bids)) {
             const auctionId = bid.auctionId;
-            const metadata = JSON.parse(await getAuctionMetadata(auctionId));
-            const auctionName = convertFieldToString(auctionState.auctions[auctionId]?.name);
+            let metadata;
+            try {
+                metadata = JSON.parse(await getAuctionMetadata(auctionId));
+            } catch (e) {
+                console.warn("Error parsing metadata for auction", auctionId);
+                metadata = {};
+            }
+
+            let auctionName = "";
+            try {
+                auctionName = convertFieldToString(auctionState.auctions[auctionId]?.name);
+            } catch (e) {
+                console.warn("Error converting auction name for auction", auctionId);
+            }
             const highestBid = findHighestBid(auctionId);
             const isHighestBid = highestBid === bid.amount;
             const isAuctionPublic = (auctionState.auctions[auctionId]?.privacy === "1field");
@@ -216,10 +228,12 @@ export const AuctionState = ({ children }) => {
 
     const updatePrivateAuctionState = async () => {
         console.log("Updating private auction state...");
-        const records = await requestRecords(PROGRAM_ID);
-        console.log("Records", records);
-        updateAuctionStateFromRecords(records);
-        console.log("AuctionState", auctionState);
+        try {
+            const records = await requestRecords(PROGRAM_ID);
+            updateAuctionStateFromRecords(records);
+        } catch (error) {
+            console.error("Error fetching records:", error);
+        }
     }
 
     const updateAuctionState = async (connected) => {
