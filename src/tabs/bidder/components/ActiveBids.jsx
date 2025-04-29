@@ -1,128 +1,138 @@
 import React, { useState, useEffect } from 'react';
-import { List, Card, Typography, Space, Skeleton, Row, Col } from 'antd';
-import { PROGRAM_ID } from '../../../core/constants';
-import { parseAleoStyle } from '../../../core/processing';
-import { fieldsToString } from '../../../core/encoder';
+import {List, Card, Typography, Space, Button, Row, Col, Tag} from 'antd';
+import { ReloadOutlined } from '@ant-design/icons';
+import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
+import { useAuctionState } from '../../../components/AuctionState.jsx';
+import { filterVisibility } from '../../../core/processing';
+import {convertFieldToString, fieldsToString} from '../../../core/encoder';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 
 export const ActiveBids = () => {
-    const [loading, setLoading] = useState(true);
+    const { connected } = useWallet();
+    const { auctionState, addAuctionMetadataToBids, updatePublicAuctionState } = useAuctionState();
+    const [loading, setLoading] = useState(false);
     const [bids, setBids] = useState([]);
-    const [auctionMetadata, setAuctionMetadata] = useState({});
 
-    const fetchData = async () => {
+    const processBidData = async () => {
+        const bids = auctionState.bids || {};
+        const bidsWithMetadata = await addAuctionMetadataToBids(bids);
+        console.log('bidsWithMetadata', bidsWithMetadata);
+        setBids(bidsWithMetadata);
+    };
+
+    const refreshData = async () => {
         setLoading(true);
         try {
-            // Fetch bids and auctions in parallel
-            const [bidsResponse, auctionsResponse] = await Promise.all([
-                fetch(`https://api.testnet.aleoscan.io/v2/mapping/list_program_mapping_values/${PROGRAM_ID}/public_bids`),
-                fetch(`https://api.testnet.aleoscan.io/v2/mapping/list_program_mapping_values/${PROGRAM_ID}/public_auctions`)
-            ]);
-
-            const bidsData = await bidsResponse.json();
-            const auctionsData = await auctionsResponse.json();
-
-            // Process auctions first to create a metadata lookup
-            const auctionsMetadata = {};
-            for (const auction of auctionsData.result) {
-                const auctionData = parseAleoStyle(auction.value);
-                const metadataUrl = fieldsToString(
-                    auctionData.item.offchain_data.map(field => 
-                        BigInt(field.replace('field', ''))
-                    )
-                );
-
-                try {
-                    const metadataResponse = await fetch(metadataUrl);
-                    const metadata = await JSON.parse(await metadataResponse.json());
-                    auctionsMetadata[auction.key] = {
-                        name: auctionData.name,
-                        image: metadata.image,
-                        auctionId: auction.key
-                    };
-                } catch (error) {
-                    console.warn('Error fetching metadata for auction:', auction.key, error);
-                }
-            }
-            setAuctionMetadata(auctionsMetadata);
-
-            // Process bids
-            const processedBids = bidsData.result
-                .map(bid => {
-                    const bidData = parseAleoStyle(bid.value);
-                    return {
-                        id: bid.key,
-                        amount: parseInt(bidData.amount.replace('u64', '')),
-                        auctionId: bidData.auction_id,
-                    };
-                })
-                .slice(0, 100); // Limit to 100 bids
-
-            setBids(processedBids);
+            // Update the public state
+            await updatePublicAuctionState();
+            // Process the updated state
+            processBidData();
         } catch (error) {
-            console.error('Error fetching data:', error);
-        } finally {
+            console.error('Error refreshing bid data:', error);
             setLoading(false);
         }
     };
 
+    // Process bid data whenever the auction state changes
     useEffect(() => {
-        fetchData();
-    }, []);
+        processBidData();
+    }, [auctionState]);
 
     return (
-        <List
-            grid={{ gutter: 16, column: 1 }}
-            dataSource={bids}
-            loading={loading}
-            style={{ 
-                maxHeight: '600px', 
-                overflowY: 'auto',
-                scrollBehavior: 'smooth'
-            }}
-            renderItem={bid => {
-                const auction = auctionMetadata[bid.auctionId];
-                const shortAuctionId = `${bid.auctionId.substring(0, 20)}...field`;
+        <Card
+            title="Active Bids"
+            extra={
+                <Button
+                    icon={<ReloadOutlined />}
+                    onClick={refreshData}
+                    loading={loading}
+                >
+                    Refresh
+                </Button>
+            }
+            style={{ width: '100%', maxWidth: '1200px', margin: '0 auto' }}
+        >
+            <div style={{ 
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                whiteSpace: 'nowrap',
+                padding: '16px 0',
+                scrollBehavior: 'smooth',
+                maxWidth: '100%'
+            }}>
+                <List
+                    dataSource={Object.values(bids)}
+                    loading={loading}
+                    style={{ 
+                        display: 'flex',
+                        flexDirection: 'row',
+                        flexWrap: 'nowrap',
+                        width: 'max-content',
+                        minWidth: '100%'
+                    }}
+                    renderItem={bid => {
+                        console.log('bid', bid);
+                        const shortAuctionId = `${bid.auctionId.substring(0, 10)}..`;
+                        const shortBidId = `${bid.id.substring(0, 10)}..`;
+                        let auctionName = "";
+                        const isPrivate = !bid.auctionName;
+                        if (!isPrivate) {
+                            auctionName = auctionName.substring(0,16) + "..";
+                        }
 
-                return (
-                    <List.Item>
-                        <Card size="small">
-                            <Row align="middle" gutter={16}>
-                                {auction && (
-                                    <Col span={4}>
-                                        <img 
-                                            src={auction.image} 
-                                            alt="Auction item"
-                                            style={{ 
-                                                width: '50px',
-                                                height: '50px',
-                                                objectFit: 'cover',
-                                                borderRadius: '4px'
-                                            }}
-                                        />
-                                    </Col>
-                                )}
-                                <Col span={auction ? 20 : 24}>
-                                    <Space direction="vertical" size={0}>
-                                        <Text strong>
-                                            Bid Amount: {bid.amount / 1_000_000} ALEO
-                                        </Text>
-                                        <Text type="secondary" style={{ fontSize: '12px' }}>
-                                            Auction ID: {shortAuctionId}
-                                        </Text>
-                                        {auction && (
-                                            <Text type="secondary">
-                                                Auction: {auction.name}
-                                            </Text>
+                        return (
+                            <div style={{ 
+                                display: 'inline-block',
+                                width: '300px',
+                                marginRight: '16px',
+                                verticalAlign: 'top'
+                            }}>
+                                <Card size="small" style={{ height: '100%', minHeight: '120px' }}>
+                                    <Row align="middle" gutter={16}>
+                                        {bid.metadata && (
+                                            <Col span={8}>
+                                                <img 
+                                                    src={bid.metadata.image}
+                                                    alt="Auction item"
+                                                    style={{ 
+                                                        width: '100%',
+                                                        height: '50px',
+                                                        objectFit: 'cover',
+                                                        borderRadius: '4px'
+                                                    }}
+                                                />
+                                            </Col>
                                         )}
-                                    </Space>
-                                </Col>
-                            </Row>
-                        </Card>
-                    </List.Item>
-                );
-            }}
-        />
+                                        <Col span={bid ? 16 : 24}>
+                                            <Space direction="vertical" size={0}>
+                                                {bid.name && (
+                                                    <Text strong ellipsis>
+                                                        Auction: {auctionName}
+                                                    </Text>
+                                                )}
+                                                <Text type="secondary" style={{ fontSize: '12px' }}>
+                                                    Auction ID: {shortAuctionId}
+                                                </Text>
+                                                <Text type="secondary" style={{ fontSize: '12px' }}>
+                                                    Bid ID: {shortBidId}
+                                                </Text>
+                                                <Text strong>
+                                                    {bid.amount / 1_000_000} ALEO
+                                                </Text>
+                                                {isPrivate && (
+                                                    <Tag color="red">Private Auction</Tag>
+                                                )}
+                                            </Space>
+                                        </Col>
+                                    </Row>
+                                </Card>
+                            </div>
+                        );
+                    }}
+                    locale={{ emptyText: 'No active bids found' }}
+                />
+            </div>
+        </Card>
     );
 }; 

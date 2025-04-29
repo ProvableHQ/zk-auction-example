@@ -2,134 +2,75 @@ import React, { useState, useEffect } from 'react';
 import { Card, List, Typography, Button } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { PROGRAM_ID } from '../../core/constants.js';
-import { removeVisbilityModifiers, parseAleoStyle } from '../../core/processing.js';
+import { filterVisibility as f } from '../../core/processing.js';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 import { useAuctionState } from '../../components/AuctionState.jsx';
-import { AleoNetworkClient } from '@provablehq/sdk';
 import { AuctionCard } from '../../components/AuctionCard.jsx';
 import { WalletMultiButton } from "@demox-labs/aleo-wallet-adapter-reactui";
 
 const { Text } = Typography;
 
 export const OpenAuctions = () => {
-    const { connected, requestRecords } = useWallet();
-    const { auctionState, setAuctioneerState } = useAuctionState();
+    const { connected, publicKey } = useWallet();
+    const { auctionState, updateAuctionStateOnConnect, updatePrivateAuctionState, updatePublicAuctionState } = useAuctionState();
     const [loading, setLoading] = useState(false);
     const [auctionData, setAuctionData] = useState({});
-    const networkClient = new AleoNetworkClient("https://api.explorer.provable.com/v1");
 
-    const fetchAuctionData = async () => {
+    const processAuctionData = () => {
         setLoading(true);
         try {
-            // Fetch all necessary data in parallel
-            const [records, publicBidsRes] = await Promise.all([
-                requestRecords(PROGRAM_ID),
-                fetch(`https://api.testnet.aleoscan.io/v2/mapping/list_program_mapping_values/${PROGRAM_ID}/public_bids`)
-            ]);
-
-            // Process public bids
-            const publicBidsData = await publicBidsRes.json();
-            const publicBidsByAuction = {};
-            publicBidsData.result.forEach(entry => {
-                const bid = parseAleoStyle(entry.value);
-                const auctionId = bid.auction_id;
-                if (!publicBidsByAuction[auctionId]) {
-                    publicBidsByAuction[auctionId] = [];
-                }
-                publicBidsByAuction[auctionId].push({
-                    amount: parseInt(bid.amount.replace('u64', '')),
-                    id: entry.key,
-                    bidder: bid.bid_public_key
-                });
-            });
-
-            // Process private bids
-            const privateBids = records
-                .filter(record => record.recordName === "PrivateBid")
-                .map(record => {
-                    record = removeVisbilityModifiers(record);
-                    return {
-                        auctionId: record.data.bid.auction_id,
-                        amount: parseInt(record.data.bid.amount.replace('u64', '')),
-                        id: record.data.bid_id,
-                        bidder: record.data.bid.bid_public_key
-                    };
-                });
-
-            // Process auction tickets
-            const auctionTickets = records.filter(record =>
-                record.recordName === "AuctionTicket" && !record.spent
-            );
-
             const processedData = {};
-            for (const ticketRecord of auctionTickets) {
-                const ticket = removeVisbilityModifiers(structuredClone(ticketRecord));
-                const auctionId = ticket.data.auction_id;
-                const isPublic = ticket.data.settings.auction_privacy !== '0field';
-                const auctioneerAddress = ticket.owner;
 
-                // Get highest bid and total bids from network
-                let highestBid = 0, totalBids = 0;
-                try {
-                    const highestBidRes = await networkClient.getProgramMappingPlaintext(
-                        PROGRAM_ID,
-                        'highest_bids',
-                        auctionId
-                    );
-                    highestBid = parseInt(highestBidRes.replace('u64', ''));
-                } catch (e) {
-                    console.warn(`Error fetching highest bid for auction ${auctionId}:`, e);
-                }
+            // Get auctions owned by the current user
+            const userAuctions = Object.entries(auctionState.auctions || {})
+                .filter(([_, auction]) => auction.auctioneer === publicKey);
+            
+            for (const [auctionId, auction] of userAuctions) {
+                // Skip redeemed auctions
+                if (auction.redeemed) continue;
 
-                try {
-                    const totalBidsRes = await networkClient.getProgramMappingPlaintext(
-                        PROGRAM_ID,
-                        'bid_count',
-                        auctionId
-                    );
-                    totalBids = parseInt(totalBidsRes.replace('u64', ''));
-                } catch (e) {
-                    console.warn(`Error fetching bid count for auction ${auctionId}:`, e);
-                }
-
-                // Combine all bids for this auction
-                const auctionPublicBids = publicBidsByAuction[auctionId] || [];
-                const auctionPrivateBids = privateBids.filter(bid => bid.auctionId === auctionId);
-
-                processedData[auctionId] = {
-                    ticketRecord,
-                    ticket,
-                    auctionId,
-                    isPublic,
-                    auctioneerAddress,
-                    highestBid: highestBid || 0,
-                    totalBids: totalBids || 0,
-                    publicBids: auctionPublicBids,
-                    privateBids: auctionPrivateBids
-                };
+                // Create the data object for AuctionCard
+                processedData[auctionId] = auction;
             }
 
             setAuctionData(processedData);
         } catch (error) {
-            console.error('Error fetching auction data:', error);
+            console.error('Error processing auction data:', error);
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        if (connected) {
-            fetchAuctionData().then(() => console.log("Auction data fetched."));
+    const refreshData = async () => {
+        setLoading(true);
+        try {
+            // Update both private and public state
+            if (connected) {
+                await updatePrivateAuctionState();
+            }
+            await updatePublicAuctionState();
+            // Process the updated state
+            processAuctionData();
+        } catch (error) {
+            console.error('Error refreshing auction data:', error);
+            setLoading(false);
         }
-    }, [connected]);
+    };
+
+    // Process auction data whenever the auction state changes
+    useEffect(() => {
+        if (Object.keys(auctionState.auctions || {}).length > 0) {
+            processAuctionData();
+        }
+    }, [auctionState]);
 
     return (
         <Card
-            title="My Open Auctions"
+            title="My Auctions"
             extra={
                 <Button
                     icon={<ReloadOutlined />}
-                    onClick={fetchAuctionData}
+                    onClick={refreshData}
                     loading={loading}
                     disabled={!connected}
                 >

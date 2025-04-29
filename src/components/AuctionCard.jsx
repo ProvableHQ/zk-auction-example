@@ -1,43 +1,40 @@
 import React, { useEffect, useState } from 'react';
 import { Card, Row, Col, Image, Statistic, Typography, Tabs, List, Button, Space, Tag, Divider } from 'antd';
-import { convertFieldToString, fieldsToString } from '../core/encoder.js';
-import { removeVisbilityModifiers } from '../core/processing.js';
+import { convertFieldToString, privacySetting } from '../core/encoder.js';
+import { filterVisibility as f} from '../core/processing.js';
 import { BidForm } from './BidForm';
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { InviteForm } from './InviteForm';
-import { Transaction } from '@demox-labs/aleo-wallet-adapter-base';
+import { Transaction, WalletAdapterNetwork } from '@demox-labs/aleo-wallet-adapter-base';
 import { PROGRAM_ID } from '../core/constants';
+import { useAuctionState } from './AuctionState.jsx';
+import { AuctionStatusTags } from './AuctionStatusTags.jsx';
+import { AuctionBidCard } from './AuctionBidCard.jsx';
+import {
+    CheckOutlined
+} from '@ant-design/icons';
 
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
 
 export const AuctionCard = ({ auctionId, data, loading }) => {
-    const { ticketRecord, ticket, highestBid, totalBids, publicBids, privateBids } = data;
-    const auctionName = convertFieldToString(ticket.data.auction.name);
-    const itemData = ticket.data.auction.item;
-    const bidTypesAccepted = ticket.data.settings.bid_types_accepted;
-    const startingBid = parseInt(removeVisbilityModifiers(ticket.data.auction.starting_bid).replace('u64', ''));
-    const { publicKey, requestTransaction } = useWallet();
-    const isPublic = data.isPublic;
-    const auctioneerAddress = data.auctioneerAddress;
-    const matchingPrivateBids = privateBids.filter(bid => bid.auctionId === auctionId);
-
+    // Local State Variables
     const [metadata, setMetadata] = useState({ image: '', name: '' });
     const [bidFormVisible, setBidFormVisible] = useState(false);
     const [bidType, setBidType] = useState(null);
     const [inviteFormVisible, setInviteFormVisible] = useState(false);
+    const {connected} = useWallet();
+
+    // Local hooks.
+    const { publicKey, requestTransaction } = useWallet();
+    const { auctionState, findHighestBid, getAuctionBids, getAuctionMetadata } = useAuctionState();
+    const displayId = convertFieldToString(data.name) || auctionId.substring(0, 20) + '...';
 
     useEffect(() => {
         const fetchMetadata = async () => {
             try {
-                const metadataUrl = fieldsToString(
-                    itemData.offchain_data.map(image =>
-                        BigInt(removeVisbilityModifiers(image).replace('field', ''))
-                    )
-                );
-                const res = await fetch(metadataUrl);
-                const json = await JSON.parse(await res.json());
+                const json = JSON.parse(await getAuctionMetadata(auctionId));
                 setMetadata({ image: json.image, name: json.name });
             } catch (err) {
                 console.warn('Error fetching metadata for auction', auctionId, err);
@@ -45,19 +42,6 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
         };
         fetchMetadata();
     }, [auctionId]);
-
-    const getBidTypeLabel = (bidType) => {
-        switch (bidType) {
-            case '0field':
-                return 'Private Only';
-            case '1field':
-                return 'Public Only';
-            case '2field':
-                return 'Mixed';
-            default:
-                return 'Unknown';
-        }
-    };
 
     const showBidForm = (type) => {
         setBidType(type);
@@ -70,88 +54,31 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
     };
 
     const isOwner = () => {
-        return publicKey && ticket.owner === publicKey;
+        return data.auctioneer === publicKey;
     };
 
-    const renderBidButtons = () => {
-        if (!isOwner()) {
-            return (
-                <Row gutter={[8, 8]} justify="end">
-                    {(bidTypesAccepted === '0field' || bidTypesAccepted === '2field') && (
-                        <Col>
-                            <Button 
-                                type="primary"
-                                onClick={() => showBidForm('private')}
-                            >
-                                Bid Privately
-                            </Button>
-                        </Col>
-                    )}
-                    {(bidTypesAccepted === '1field' || bidTypesAccepted === '2field') && (
-                        <Col>
-                            <Button 
-                                type="default"
-                                onClick={() => showBidForm('public')}
-                            >
-                                Bid Publicly
-                            </Button>
-                        </Col>
-                    )}
-                </Row>
-            );
-        }
-        return null;
+    const privateBids = () => {
+        return getAuctionBids(auctionId).filter(bid => !bid.isPublic);
     };
 
-    const renderOwnerButtons = () => {
-        if (isOwner()) {
-            return (
-                <Button 
-                    type="primary"
-                    block
-                    onClick={() => setInviteFormVisible(true)}
-                >
-                    Invite to Bid
-                </Button>
-            );
-        }
-        return null;
-    };
-
-    const findHighestBidAmount = () => {
-        let highestAmount = 0;
-        
-        // Check public bids
-        publicBids.forEach(bid => {
-            const amount = parseInt(bid.amount);
-            if (amount > highestAmount) {
-                highestAmount = amount;
-            }
-        });
-
-        // Check private bids
-        matchingPrivateBids.forEach(bid => {
-            const amount = parseInt(bid.amount);
-            if (amount > highestAmount) {
-                highestAmount = amount;
-            }
-        });
-
-        return highestAmount;
-    };
+    const publicBids = () => {
+        return getAuctionBids(auctionId).filter(bid => bid.isPublic);
+    }
 
     const handleSelectWinner = async (bid, isPrivate) => {
         try {
-            const inputs = isPrivate ? 
+            const inputs = isPrivate ?
                 // Inputs for private winner selection
                 [
-                    ticketRecord,     // Use original AuctionTicket record
-                    bid.originalRecord, // Use original PrivateBid record
+                    data.ticketRecord,     // Use original AuctionTicket record
+                    auctionState.privateBids.filter(privateBid => {
+                        return (f(privateBid.data.bid.auction_id) === bid.auctionId && f(privateBid.data.bid_id) === bid.id)
+                    })[0],
                 ] :
                 // Inputs for public winner selection
                 [
-                    ticketRecord,     // Use original AuctionTicket record
-                    bid,
+                    data.ticketRecord,     // Use original AuctionTicket record
+                    `{\n  amount: ${bid.amount}u64,\n  auction_id: ${bid.auctionId},\n  bid_public_key: ${bid.publicKey}\n}`, // Use original PublicBid record
                     bid.id,          // winning_bid_id
                 ];
             
@@ -159,10 +86,12 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
 
             const transaction = Transaction.createTransaction(
                 publicKey,
+                WalletAdapterNetwork.TestnetBeta,
                 PROGRAM_ID,
                 isPrivate ? 'select_winner_private' : 'select_winner_public',
                 inputs,
-                0.276, // Fee in credits
+                100000, // Fee in credits
+                false,
             );
 
             const result = await requestTransaction(transaction);
@@ -171,54 +100,6 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
             console.error('Error selecting winner:', error);
         }
     };
-
-    const renderBidCard = (bid, isPrivate = true) => {
-        const bidAmount = parseInt(bid.amount);
-        const isHighestBid = bidAmount === findHighestBidAmount();
-
-        console.log('Bid:', bid);
-        console.log('Is private:', isPrivate);
-        
-        return (
-            <Card size="small" style={{ marginBottom: '8px' }}>
-                <Row justify="space-between" align="middle">
-                    <Col>
-                        <Space direction="vertical" size={0}>
-                            <Text>Bid Amount: {bidAmount / 1_000_000} ALEO</Text>
-                            <Text type="secondary">
-                                Bid ID: {bid.id.substring(0, 21)}..
-                            </Text>
-                            {isHighestBid && (
-                                <Tag color="#87d068">Highest Bid</Tag>
-                            )}
-                        </Space>
-                    </Col>
-                    <Col>
-                        {isOwner() && isHighestBid && (
-                            <Button 
-                                type="primary"
-                                size="small"
-                                onClick={() => handleSelectWinner(bid, isPrivate)}
-                            >
-                                Select Winner
-                            </Button>
-                        )}
-                    </Col>
-                </Row>
-            </Card>
-        );
-    };
-
-    const renderStatusTags = () => (
-        <Space>
-            <Tag color={isPublic ? '#1890ff' : '#f50'}>
-                {isPublic ? 'Public Auction' : 'Private Auction'}
-            </Tag>
-            {isOwner() && (
-                <Tag color="#52c41a">Your Auction</Tag>
-            )}
-        </Space>
-    );
 
     return (
         <Card
@@ -229,9 +110,14 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
             <Row align="middle" style={{ marginBottom: 8 }}>
                 <Col flex="auto">
                     <Space size="middle" align="center">
-                        <Title level={4} style={{ margin: 0 }}>{auctionName}</Title>
-                        {renderStatusTags()}
+                        <Title level={4} style={{ margin: 0 }}>{convertFieldToString(data.name)}</Title>
+                        <AuctionStatusTags data={data} isOwner={isOwner()} />
                     </Space>
+                </Col>
+            </Row>
+            <Row style={{ marginBottom: 8 }}>
+                <Col>
+                    <Text type="secondary">Auction ID: {auctionId.substring(0,20) + "..."}</Text>
                 </Col>
             </Row>
             <Divider style={{ margin: '0 0 16px 0' }} />
@@ -247,61 +133,116 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                     <Title level={5} style={{ marginTop: '8px', textAlign: 'center' }}>
                         {metadata.name}
                     </Title>
-                    {auctioneerAddress && (
+                    {data.auctioneer && (
                         <Typography.Text type="secondary" style={{ 
                             display: 'block', 
                             textAlign: 'center',
                             wordBreak: 'break-all',
                             marginTop: '8px'
                         }}>
-                            Auctioneer: {auctioneerAddress}
+                            Auctioneer: {data.auctioneer}
                         </Typography.Text>
                     )}
                     <div style={{ marginTop: '16px' }}>
-                        {renderOwnerButtons()}
+                        { isOwner() && (
+                            <Button
+                                type="primary"
+                                block
+                                onClick={() => setInviteFormVisible(true)}
+                            >
+                                Invite to Bid
+                            </Button>
+                        )}
                     </div>
                 </Col>
                 <Col span={16}>
                     <Row gutter={[16, 16]}>
-                        <Col span={18}>
+                        <Col span={24}>
                             <Row gutter={[16, 16]}>
                                 <Col span={8}>
-                                    <Statistic title="Starting Bid" value={startingBid / 1_000_000.0} suffix="ALEO" />
+                                    <Statistic title="Starting Bid" value={data.startingBid / 1_000_000.0} suffix="ALEO" />
                                 </Col>
                                 <Col span={8}>
                                     <Statistic 
                                         title="Highest Bid" 
-                                        value={findHighestBidAmount() / 1_000_000} 
+                                        value={findHighestBid(auctionId) / 1_000_000}
                                         suffix="ALEO" 
                                     />
                                 </Col>
                                 <Col span={8}>
-                                    <Statistic title="Total Bids" value={totalBids} />
+                                    <Statistic title="Bid Types" value={privacySetting(data.bidTypes)} />
                                 </Col>
                             </Row>
-                        </Col>
-                        <Col span={6}>
-                            <Statistic title="Bid Types" value={getBidTypeLabel(bidTypesAccepted)} />
+                            <Row gutter={[16, 16]} style={{ marginTop: '16px' }}>
+                                <Col span={8}>
+                                    <Statistic title="Private Bids" value={privateBids().length} />
+                                </Col>
+                                <Col span={8}>
+                                    <Statistic title="Public Bids" value={publicBids().length} />
+                                </Col>
+                                <Col span={8}>
+                                    <Statistic title="Total Bids" value={privateBids().length + publicBids().length} />
+                                </Col>
+                            </Row>
                         </Col>
                     </Row>
                     
                     <div style={{ marginTop: '16px', marginBottom: '16px' }}>
-                        {renderBidButtons()}
+                        <Row gutter={[8, 8]} justify="end">
+                            {!data.winner && (data.bidTypes === '0field' || data.bidTypes === '2field') && (
+                                <Col>
+                                    <Button
+                                        type="primary"
+                                        onClick={() => showBidForm('private')}
+                                    >
+                                        Bid Privately
+                                    </Button>
+                                </Col>
+                            )}
+                            {!data.winner && (data.bidTypes  === '1field' || data.bidTypes === '2field') && (
+                                <Col>
+                                    <Button
+                                        type="default"
+                                        onClick={() => showBidForm('public')}
+                                    >
+                                        Bid Publicly
+                                    </Button>
+                                </Col>
+                            )}
+                        </Row>
                     </div>
 
                     <Tabs defaultActiveKey="1">
                         <TabPane tab="Private Bids" key="1">
                             <List
-                                dataSource={matchingPrivateBids}
-                                renderItem={bid => renderBidCard(bid, true)}
+                                dataSource={privateBids()}
+                                renderItem={bid => (
+                                    <AuctionBidCard
+                                        bid={bid}
+                                        isOwner={isOwner()}
+                                        isPrivate={true}
+                                        isActive={auctionState[auctionId]?.active}
+                                        handleSelectWinner={handleSelectWinner}
+                                        highestBidAmount={findHighestBid(auctionId)}
+                                    />
+                                )}
                                 locale={{ emptyText: 'No private bids yet' }}
                             />
                         </TabPane>
                         <TabPane tab="Public Bids" key="2">
                             <List
-                                dataSource={publicBids}
-                                renderItem={bid => renderBidCard(bid, false)}
-                                locale={{ emptyText: 'No public bids yet' }}
+                                dataSource={publicBids()}
+                                renderItem={bid => (
+                                    <AuctionBidCard
+                                        bid={bid}
+                                        isOwner={isOwner()}
+                                        isPrivate={true}
+                                        isActive={auctionState[auctionId]?.active}
+                                        handleSelectWinner={handleSelectWinner}
+                                        highestBidAmount={findHighestBid(auctionId)}
+                                    />
+                                )}
+                                locale={{ emptyText: 'No private bids yet' }}
                             />
                         </TabPane>
                     </Tabs>
@@ -314,12 +255,12 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                 auctionData={data}
                 bidType={bidType}
             />
-            
-            <InviteForm
+
+            {connected && <InviteForm
                 visible={inviteFormVisible}
                 onCancel={() => setInviteFormVisible(false)}
-                ticketRecord={ticketRecord}
-            />
+                ticketRecord={data.ticketRecord}
+            />}
         </Card>
     );
 };

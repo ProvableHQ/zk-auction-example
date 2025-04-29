@@ -4,12 +4,15 @@ import { App, ConfigProvider, Layout, Menu, Switch, theme } from "antd";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AuctionState } from "./components/AuctionState.jsx";
 import { WalletWrapper } from "./components/WalletWrapper.jsx";
+import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 
 import {
-    CodeOutlined,
+    AuditOutlined,
+    OrderedListOutlined,
     SwapOutlined,
 } from "@ant-design/icons";
 import { WasmLoadingMessage } from "./components/WasmLoadingMessage.jsx";
+import {WalletMultiButton} from "@demox-labs/aleo-wallet-adapter-reactui";
 
 const { Content, Footer, Sider } = Layout;
 
@@ -17,16 +20,22 @@ const menuItems = [
     {
         label: <Link to="/auctioneer">Create Auction</Link>,
         key: "auctioneer",
-        icon: <CodeOutlined />,
+        icon: <AuditOutlined />,
     },
     {
-        label: <Link to="/bidder">Bidder</Link>,
-        key: "bidder",
+        label: <Link to="/marketplace">Marketplace</Link>,
+        key: "marketplace",
         icon: <SwapOutlined />,
+    },
+    {
+        label: <Link to="/bids">My Bids</Link>,
+        key: "bids",
+        icon: <OrderedListOutlined />,
     },
 ];
 function Main() {
-    const [menuIndex, setMenuIndex] = useState("/bidder");
+    const [menuIndex, setMenuIndex] = useState("/auctioneer");
+    const { connected } = useWallet();
 
     const navigate = useNavigate();
     const location = useLocation();
@@ -36,9 +45,6 @@ function Main() {
 
     useEffect(() => {
         setMenuIndex(location.pathname);
-        // if (location.pathname === "/") {
-        //     navigate("/account");
-        // }
     }, [location, navigate]);
 
     const [darkMode, setDarkMode] = useState(true);
@@ -81,6 +87,9 @@ function Main() {
                                 checkedChildren="Dark"
                                 unCheckedChildren="Light"
                             />
+                            <div style={{ margin: "20px" }}>
+                                <WalletMultiButton />
+                            </div>
                         </Sider>
                         <Layout>
                             <Content style={{ padding: "50px 50px", margin: "0 auto", minWidth: "850px" }}>

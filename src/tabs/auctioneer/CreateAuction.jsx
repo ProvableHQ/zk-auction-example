@@ -1,12 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Form, Input, Select, Radio, Button, InputNumber, Table, Image, Typography, Space, Checkbox } from 'antd';
+import {
+    Card,
+    Form,
+    Input,
+    Select,
+    Radio,
+    Button,
+    InputNumber,
+    Table,
+    Image,
+    Typography,
+    Space,
+    Checkbox,
+    Collapse,
+    Switch
+} from 'antd';
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { Transaction, WalletAdapterNetwork } from "@demox-labs/aleo-wallet-adapter-base";
 import { stringToFieldInputs, encodeStringAsField } from "../../core/encoder.js";
 import { PROGRAM_ID } from "../../core/constants.js";
 import { Field, Scalar } from "@provablehq/sdk";
+import { PlusOutlined } from '@ant-design/icons';
 
 const { Text, Paragraph } = Typography;
+const { Panel } = Collapse;
 
 const PREDEFINED_ITEMS = [
     {
@@ -37,7 +54,9 @@ export const CreateAuction = () => {
     const [form] = Form.useForm();
     const [selectedItemData, setSelectedItemData] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [cardLoading, setCardLoading] = useState(false);
     const [auctionType, setAuctionType] = useState('public');
+    const [isCollapsed, setIsCollapsed] = useState(true);
 
     // Add useEffect to load the first item on mount
     useEffect(() => {
@@ -151,180 +170,188 @@ export const CreateAuction = () => {
     };
 
     return (
-        <Card title="Create New Auction">
-            <Form
-                form={form}
-                layout="vertical"
-                onFinish={handleSubmit}
-                initialValues={{
-                    auctionType: 'public',
-                    bidTypesAccepted: '0',
-                    publishAddress: false,
-                    itemId: PREDEFINED_ITEMS[0].id  // Set initial itemId
-                }}
+        <Card>
+            <Collapse 
+                activeKey={isCollapsed ? [] : ['1']} 
+                onChange={(keys) => setIsCollapsed(keys.length === 0)}
+                expandIcon={({ isActive }) => <PlusOutlined rotate={isActive ? 90 : 0} />}
             >
-                <Form.Item
-                    name="auctionType"
-                    label="Auction Type"
-                    rules={[{ required: true }]}
-                >
-                    <Radio.Group onChange={(e) => handleAuctionTypeChange(e.target.value)}>
-                        <Radio.Button value="private">Private Auction</Radio.Button>
-                        <Radio.Button value="public">Public Auction</Radio.Button>
-                    </Radio.Group>
-                </Form.Item>
-
-                <Form.Item
-                    name="auctionName"
-                    label="Auction Name"
-                    rules={[{ required: true, message: 'Please enter an auction name' }]}
-                >
-                    <Input placeholder="Enter auction name" />
-                </Form.Item>
-
-                <Form.Item
-                    name="startingBid"
-                    label="Starting Bid Amount"
-                    rules={[{ required: true, message: 'Please enter a starting bid in ALEO microcredits' }]}
-                >
-                    <InputNumber
-                        min={1}
-                        placeholder="Enter starting bid amount (ALEO microcredits)"
-                        style={{ width: '100%' }}
-                        defaultValue={10000}
-                    />
-                </Form.Item>
-
-                <Form.Item
-                    name="bidTypesAccepted"
-                    label="Accepted Bid Types"
-                    rules={[{ required: true }]}
-                >
-                    <Select defaultValue={"2"} defaultActiveFirstOption={false}>
-                        <Select.Option value="2">Both Public and Private Bids</Select.Option>
-                        <Select.Option value="0">Private Bids Only</Select.Option>
-                        <Select.Option value="1">Public Bids Only</Select.Option>
-                    </Select>
-                </Form.Item>
-
-                <Form.Item
-                    name="itemId"
-                    label="Select Item"
-                    rules={[{ required: true, message: 'Please select an item' }]}
-                >
-                    <Select onChange={handleItemSelect}>
-                        {PREDEFINED_ITEMS.map(item => (
-                            <Select.Option key={item.id} value={item.id}>
-                                {item.name}
-                            </Select.Option>
-                        ))}
-                    </Select>
-                </Form.Item>
-
-                {selectedItemData && (
-                    <div style={{ marginTop: '32px' }}>
-                        <Typography.Title level={3} style={{ 
-                            textAlign: 'center',
-                            marginBottom: '24px',
-                            borderBottom: '1px solid #f0f0f0',
-                            paddingBottom: '16px'
-                        }}>
-                            Selected Item Details
-                        </Typography.Title>
-                        
-                        <Card 
-                            loading={loading} 
-                            bordered={true}
-                            style={{
-                                borderRadius: '8px'
-                            }}
+                <Panel header="Create New Auction" key="1">
+                    <Form
+                        form={form}
+                        layout="vertical"
+                        onFinish={handleSubmit}
+                        initialValues={{
+                            auctionType: 'public',
+                            bidTypesAccepted: '0',
+                            publishAddress: false,
+                            itemId: PREDEFINED_ITEMS[0].id  // Set initial itemId
+                        }}
+                    >
+                        <Form.Item
+                            name="auctionType"
+                            label="Auction Type"
+                            rules={[{ required: true }]}
                         >
-                            <div style={{ 
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                gap: '16px'
-                            }}>
-                                <Typography.Title 
-                                    level={4} 
-                                    style={{ 
-                                        margin: 0,
-                                        color: '#1890ff'
+                            <Radio.Group onChange={(e) => handleAuctionTypeChange(e.target.value)}>
+                                <Radio.Button value="private">Private Auction</Radio.Button>
+                                <Radio.Button value="public">Public Auction</Radio.Button>
+                            </Radio.Group>
+                        </Form.Item>
+
+                        <Form.Item
+                            name="auctionName"
+                            label="Auction Name"
+                            rules={[{ required: true, message: 'Please enter an auction name' }]}
+                        >
+                            <Input placeholder="Enter auction name" />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="startingBid"
+                            label="Starting Bid Amount"
+                            rules={[{ required: true, message: 'Please enter a starting bid in ALEO microcredits' }]}
+                        >
+                            <InputNumber
+                                min={1}
+                                placeholder="Enter starting bid amount (ALEO microcredits)"
+                                style={{ width: '100%' }}
+                                defaultValue={10000}
+                            />
+                        </Form.Item>
+
+                        <Form.Item
+                            name="bidTypesAccepted"
+                            label="Accepted Bid Types"
+                            rules={[{ required: true }]}
+                        >
+                            <Select defaultValue={"2"} defaultActiveFirstOption={false}>
+                                <Select.Option value="2">Both Public and Private Bids</Select.Option>
+                                <Select.Option value="0">Private Bids Only</Select.Option>
+                                <Select.Option value="1">Public Bids Only</Select.Option>
+                            </Select>
+                        </Form.Item>
+
+                        <Form.Item
+                            name="itemId"
+                            label="Select Item"
+                            rules={[{ required: true, message: 'Please select an item' }]}
+                        >
+                            <Select onChange={handleItemSelect}>
+                                {PREDEFINED_ITEMS.map(item => (
+                                    <Select.Option key={item.id} value={item.id}>
+                                        {item.name}
+                                    </Select.Option>
+                                ))}
+                            </Select>
+                        </Form.Item>
+
+                        {selectedItemData && (
+                            <div style={{ marginTop: '32px' }}>
+                                <Typography.Title level={3} style={{ 
+                                    textAlign: 'center',
+                                    marginBottom: '24px',
+                                    borderBottom: '1px solid #f0f0f0',
+                                    paddingBottom: '16px'
+                                }}>
+                                    Selected Item Details
+                                </Typography.Title>
+                                
+                                <Card 
+                                    loading={loading} 
+                                    bordered={true}
+                                    style={{
+                                        borderRadius: '8px'
                                     }}
                                 >
-                                    {selectedItemData.name}
-                                </Typography.Title>
-
-                                <div style={{
-                                    width: '100%',
-                                    maxWidth: '400px',
-                                    padding: '16px',
-                                    borderRadius: '8px',
-                                    display: 'flex',
-                                    justifyContent: 'center'
-                                }}>
-                                    <Image
-                                        src={selectedItemData.image}
-                                        alt={selectedItemData.name}
-                                        style={{ 
-                                            maxWidth: '100%',
-                                            height: 'auto',
-                                            borderRadius: '4px'
-                                        }}
-                                        preview={true}
-                                    />
-                                </div>
-
-                                <div style={{
-                                    width: '100%',
-                                    padding: '16px',
-                                    borderRadius: '8px',
-                                    textAlign: 'center'
-                                }}>
-                                    <Paragraph style={{
-                                        fontSize: '16px',
-                                        lineHeight: '1.6',
-                                        margin: 0
+                                    <div style={{ 
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        gap: '16px'
                                     }}>
-                                        {selectedItemData.description}
-                                    </Paragraph>
-                                </div>
+                                        <Typography.Title 
+                                            level={4} 
+                                            style={{ 
+                                                margin: 0,
+                                                color: '#1890ff'
+                                            }}
+                                        >
+                                            {selectedItemData.name}
+                                        </Typography.Title>
 
-                                <div style={{ width: '100%' }}>
-                                    <Typography.Title 
-                                        level={5} 
-                                        style={{ 
-                                            marginBottom: '16px',
-                                            textAlign: 'center'
-                                        }}
-                                    >
-                                        Item Attributes
-                                    </Typography.Title>
-                                    <Table
-                                        columns={columns}
-                                        dataSource={selectedItemData.attributes.map((attr, index) => ({
-                                            ...attr,
-                                            key: index
-                                        }))}
-                                        pagination={false}
-                                        size="middle"
-                                        style={{
+                                        <div style={{
+                                            width: '100%',
+                                            maxWidth: '400px',
+                                            padding: '16px',
                                             borderRadius: '8px',
-                                            overflow: 'hidden'
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        </Card>
-                    </div>
-                )}
+                                            display: 'flex',
+                                            justifyContent: 'center'
+                                        }}>
+                                            <Image
+                                                src={selectedItemData.image}
+                                                alt={selectedItemData.name}
+                                                style={{ 
+                                                    maxWidth: '100%',
+                                                    height: 'auto',
+                                                    borderRadius: '4px'
+                                                }}
+                                                preview={true}
+                                            />
+                                        </div>
 
-                <Form.Item>
-                    <Button type="primary" htmlType="submit" block>
-                        Create Auction
-                    </Button>
-                </Form.Item>
-            </Form>
+                                        <div style={{
+                                            width: '100%',
+                                            padding: '16px',
+                                            borderRadius: '8px',
+                                            textAlign: 'center'
+                                        }}>
+                                            <Paragraph style={{
+                                                fontSize: '16px',
+                                                lineHeight: '1.6',
+                                                margin: 0
+                                            }}>
+                                                {selectedItemData.description}
+                                            </Paragraph>
+                                        </div>
+
+                                        <div style={{ width: '100%' }}>
+                                            <Typography.Title 
+                                                level={5} 
+                                                style={{ 
+                                                    marginBottom: '16px',
+                                                    textAlign: 'center'
+                                                }}
+                                            >
+                                                Item Attributes
+                                            </Typography.Title>
+                                            <Table
+                                                columns={columns}
+                                                dataSource={selectedItemData.attributes.map((attr, index) => ({
+                                                    ...attr,
+                                                    key: index
+                                                }))}
+                                                pagination={false}
+                                                size="middle"
+                                                style={{
+                                                    borderRadius: '8px',
+                                                    overflow: 'hidden'
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </Card>
+                            </div>
+                        )}
+
+                        <Form.Item>
+                            <Button type="primary" htmlType="submit" block>
+                                Create Auction
+                            </Button>
+                        </Form.Item>
+                    </Form>
+                </Panel>
+            </Collapse>
         </Card>
     );
 }; 

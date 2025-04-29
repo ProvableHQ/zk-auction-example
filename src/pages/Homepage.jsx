@@ -13,19 +13,19 @@ const Homepage = () => {
                 ></img>
             </Link>
             <div className="headerContainer">
-                <h1 className="header">Zero Knowledge Auction</h1>
+                <h1 className="header">Zero Knowledge Auctions</h1>
                 <p className="subheader">
-                    Learn how to manage private state via a private auction.
+                    Learn how to manage private state via private auctions.
                 </p>{" "}
                 <div className="buttonRow">
                 <Link
                     target="_blank"
                     rel="noopener noreferrer"
-                    to="/bidder"
+                    to="/marketplace"
                 >
                     <button className="button">
                         {" "}
-                        Make a Bid <span className="arrow">&rarr;</span>{" "}
+                        MarketPlace <span className="arrow">&rarr;</span>{" "}
                     </button>
                 </Link>{" "}
                 <Link
@@ -35,7 +35,7 @@ const Homepage = () => {
                 >
                     <button className="button">
                         {" "}
-                        See Open bids <span className="arrow">&rarr;</span>{" "}
+                        Create an Auction <span className="arrow">&rarr;</span>{" "}
                     </button>
                 </Link>{" "}
                 </div>

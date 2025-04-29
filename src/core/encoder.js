@@ -120,6 +120,17 @@ function fieldsToString(fields) {
   return bigIntToString(bigIntValue);
 }
 
-console.log(stringToFields("ANS"));
+const privacySetting = (bidType) => {
+  switch (bidType) {
+    case '0field':
+      return 'Private Only';
+    case '1field':
+      return 'Public Only';
+    case '2field':
+      return 'Private & Public';
+    default:
+      return 'Unknown';
+  }
+};
 
-export { encodeStringAsField, convertFieldToString, stringToFields, stringToFieldInputs, fieldsToString};
+export { encodeStringAsField, convertFieldToString, privacySetting, stringToFields, stringToFieldInputs, fieldsToString};
