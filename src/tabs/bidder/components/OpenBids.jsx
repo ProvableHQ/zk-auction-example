@@ -107,7 +107,7 @@ export const OpenBids = () => {
                                                 {bid.isAuctionPublic ? 'Public Auction' : 'Private Auction'}
                                             </Tag>
                                             <Tag color={bid.isPublic ? 'blue' : 'purple'}>
-                                                {bid.isPublic ? 'Public Bid' : 'Private Bid'} Bid
+                                                {bid.isPublic ? 'Public' : 'Private'} Bid
                                             </Tag>
                                             <Tag color={bid.isAuctionActive ? 'green' : 'red'}>
                                                 {bid.isAuctionActive ? 'Open' : 'Closed'}
