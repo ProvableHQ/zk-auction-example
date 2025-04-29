@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, List, Button, Typography, Row, Col, Space, Tag, Select, Radio, Tabs, message } from 'antd';
-import { ReloadOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Card, List, Button, Typography, Row, Col, Space, Tag, Select, Radio, Tabs, message, Modal, Dropdown, Menu } from 'antd';
+import { ReloadOutlined, CheckCircleOutlined, TrophyOutlined, DownOutlined } from '@ant-design/icons';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 import { useAuctionState } from '../../../components/AuctionState.jsx';
 import {WalletMultiButton} from "@demox-labs/aleo-wallet-adapter-reactui";
@@ -8,6 +8,7 @@ import {WalletMultiButton} from "@demox-labs/aleo-wallet-adapter-reactui";
 const { Text } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
+const { confirm } = Modal;
 
 export const OpenBids = () => {
     // Define local state.
@@ -15,11 +16,14 @@ export const OpenBids = () => {
     const [bids, setBids] = useState({});
     const [filteredBids, setFilteredBids] = useState({});
     const [redeemingBid, setRedeemingBid] = useState(null);
+    const [redemptionModalVisible, setRedemptionModalVisible] = useState(false);
+    const [selectedBid, setSelectedBid] = useState(null);
     
     // Filter states
     const [auctionStatus, setAuctionStatus] = useState('all'); 
     const [bidType, setBidType] = useState('all'); 
     const [auctionType, setAuctionType] = useState('all');
+    const [bidStatus, setBidStatus] = useState('all');
     const [viewMode, setViewMode] = useState('list');
 
     // Get info from hooks.
@@ -65,13 +69,22 @@ export const OpenBids = () => {
             );
         }
         
+        // Filter by bid status (winning or not)
+        if (bidStatus !== 'all') {
+            filtered = Object.fromEntries(
+                Object.entries(filtered).filter(([_, bid]) => 
+                    bidStatus === 'winning' ? bid.winner : !bid.winner
+                )
+            );
+        }
+        
         setFilteredBids(filtered);
     };
 
     // Update filters when they change
     useEffect(() => {
         applyFilters(bids);
-    }, [auctionStatus, bidType, auctionType]);
+    }, [auctionStatus, bidType, auctionType, bidStatus]);
 
     const refreshData = async () => {
         setLoading(true);
@@ -94,22 +107,47 @@ export const OpenBids = () => {
         processBidData();
     }, [auctionState]);
 
+    // Check if a bid has an associated auction invite
+    const hasAuctionInvite = (bid) => {
+        // This would check if there's an AuctionInvite record for this bid
+        // For now, we'll simulate this check
+        return auctionState.bidInvites && 
+               auctionState.bidInvites.some(invite => invite.auction_id === bid.auctionId);
+    };
+
     // Handle bid redemption
-    const handleRedeemBid = async (bid) => {
+    const handleRedeemBid = (bid) => {
         if (!connected || !publicKey) {
             message.error('Please connect your wallet first');
             return;
         }
 
-        setRedeemingBid(bid.id);
+        setSelectedBid(bid);
+        setRedemptionModalVisible(true);
+    };
+
+    // Execute the redemption based on the selected method
+    const executeRedemption = async (redemptionMethod) => {
+        if (!selectedBid) return;
+        
+        setRedeemingBid(selectedBid.id);
+        setRedemptionModalVisible(false);
+        
         try {
-            // Here you would call the actual redemption function
-            // For example: await redeemBid(bid.auctionId, bid.id);
+            // Here you would call the actual redemption function based on the method
+            // For example:
+            // if (redemptionMethod === 'public') {
+            //     await redeemBidPublic(selectedBid.auctionId, selectedBid.id);
+            // } else if (redemptionMethod === 'private_to_public') {
+            //     await redeemBidPrivateToPublic(selectedBid.auctionId, selectedBid.id);
+            // } else if (redemptionMethod === 'private') {
+            //     await redeemBidPrivate(selectedBid.auctionId, selectedBid.id);
+            // }
             
             // For now, we'll just simulate a successful redemption
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            message.success('Bid successfully redeemed!');
+            message.success(`Bid successfully redeemed using ${redemptionMethod} method!`);
             
             // Refresh the data to update the UI
             await refreshData();
@@ -118,7 +156,66 @@ export const OpenBids = () => {
             message.error('Failed to redeem bid. Please try again.');
         } finally {
             setRedeemingBid(null);
+            setSelectedBid(null);
         }
+    };
+
+    // Render the redemption options modal
+    const renderRedemptionModal = () => {
+        if (!selectedBid) return null;
+        
+        const isPublicAuction = selectedBid.isAuctionPublic;
+        const hasInvite = hasAuctionInvite(selectedBid);
+        
+        return (
+            <Modal
+                title="Select Redemption Method"
+                visible={redemptionModalVisible}
+                onCancel={() => {
+                    setRedemptionModalVisible(false);
+                    setSelectedBid(null);
+                }}
+                footer={null}
+            >
+                <Space direction="vertical" style={{ width: '100%' }}>
+                    <Text>Please select a redemption method for your winning bid:</Text>
+                    
+                    {isPublicAuction && (
+                        <>
+                            <Button 
+                                type="primary" 
+                                block 
+                                onClick={() => executeRedemption('public')}
+                            >
+                                Redeem Publicly
+                            </Button>
+                            
+                            <Button 
+                                block 
+                                onClick={() => executeRedemption('private_to_public')}
+                            >
+                                Redeem Privately (Transfer to Public Address)
+                            </Button>
+                        </>
+                    )}
+                    
+                    {hasInvite && (
+                        <Button 
+                            block 
+                            onClick={() => executeRedemption('private')}
+                        >
+                            Redeem Privately
+                        </Button>
+                    )}
+                    
+                    {!isPublicAuction && !hasInvite && (
+                        <Text type="danger">
+                            No valid redemption methods available for this bid.
+                        </Text>
+                    )}
+                </Space>
+            </Modal>
+        );
     };
 
     // Group bids by auction
@@ -262,7 +359,7 @@ export const OpenBids = () => {
                 <>
                     <Space direction="vertical" style={{ width: '100%', marginBottom: 16 }}>
                         <Row gutter={16}>
-                            <Col span={8}>
+                            <Col span={6}>
                                 <Select
                                     style={{ width: '100%' }}
                                     value={auctionStatus}
@@ -274,7 +371,7 @@ export const OpenBids = () => {
                                     <Option value="closed">Closed Auctions</Option>
                                 </Select>
                             </Col>
-                            <Col span={8}>
+                            <Col span={6}>
                                 <Select
                                     style={{ width: '100%' }}
                                     value={bidType}
@@ -286,7 +383,7 @@ export const OpenBids = () => {
                                     <Option value="private">Private Bids</Option>
                                 </Select>
                             </Col>
-                            <Col span={8}>
+                            <Col span={6}>
                                 <Select
                                     style={{ width: '100%' }}
                                     value={auctionType}
@@ -298,7 +395,21 @@ export const OpenBids = () => {
                                     <Option value="private">Private Auctions</Option>
                                 </Select>
                             </Col>
+                            <Col span={6}>
+                                <Select
+                                    style={{ width: '100%' }}
+                                    value={bidStatus}
+                                    onChange={setBidStatus}
+                                    placeholder="Bid Status"
+                                    suffixIcon={<TrophyOutlined style={{ color: bidStatus === 'winning' ? '#52c41a' : undefined }} />}
+                                >
+                                    <Option value="all">All Bids</Option>
+                                    <Option value="winning">Winning Bids</Option>
+                                    <Option value="non-winning">Non-Winning Bids</Option>
+                                </Select>
+                            </Col>
                         </Row>
+                        
                         <Radio.Group 
                             value={viewMode} 
                             onChange={e => setViewMode(e.target.value)}
@@ -318,6 +429,8 @@ export const OpenBids = () => {
                     ) : (
                         renderGroupedBids()
                     )}
+                    
+                    {renderRedemptionModal()}
                 </>
             )}
         </Card>
