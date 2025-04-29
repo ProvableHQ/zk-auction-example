@@ -92,13 +92,6 @@ export const ActiveBids = () => {
         }
     };
 
-    useEffect(() => {
-        // Update the auction state when the component mounts
-        updateAuctionStateOnConnect().then(() => {
-            processBidData();
-        });
-    }, []);
-
     // Process bid data whenever the auction state changes
     useEffect(() => {
         if (Object.keys(auctionState.bids || {}).length > 0) {

@@ -9,143 +9,19 @@ import {convertFieldToString, fieldsToString} from '../../../core/encoder';
 const { Text } = Typography;
 
 export const OpenBids = () => {
-    const { connected, publicKey } = useWallet();
-    const { auctionState, updateAuctionStateOnConnect, updatePrivateAuctionState } = useAuctionState();
+    // Define local state.
     const [loading, setLoading] = useState(false);
     const [bidData, setBidData] = useState({});
-    const [auctionMetadata, setAuctionMetadata] = useState({});
 
-    // Function to fetch metadata for an auction
-    const fetchAuctionMetadata = async (auctionId, metadata) => {
-        if (!metadata) return;
-        
-        try {
-            const metadataUrl = fieldsToString(
-                metadata.map(field => 
-                    BigInt(filterVisibility(field).replace('field', ''))
-                )
-            );
-            
-            const response = await fetch(metadataUrl);
-            const json = await response.json();
-            const parsedMetadata = JSON.parse(json);
-            
-            if (parsedMetadata.image) {
-                setAuctionMetadata(prev => ({
-                    ...prev,
-                    [auctionId]: {
-                        ...prev[auctionId],
-                        image: parsedMetadata.image
-                    }
-                }));
-            }
-        } catch (error) {
-            console.warn('Error fetching metadata for auction:', auctionId, error);
-        }
-    };
+    // Get info from hooks.
+    const { connected, publicKey } = useWallet();
+    const { auctionState, addAuctionMetadataToBids, getUserBids, updateAuctionState } = useAuctionState();
 
-    const processBidData = () => {
-        setLoading(true);
-        try {
-            const processedData = {};
-
-            // Get bids made by the current user
-            const userBids = Object.values(auctionState.bids || {})
-                .filter(bid => bid.owner === publicKey);
-            
-            // Get private bids made by the current user
-            const privateBids = auctionState.privateBids
-                .filter(record => {
-                    try {
-                        return filterVisibility(record.data.bid.bid_public_key) === publicKey;
-                    } catch (e) {
-                        return false;
-                    }
-                });
-
-            // Process public bids
-            for (const bid of userBids) {
-                const auctionId = bid.auctionId;
-                const auction = auctionState.auctions[auctionId];
-                console.log("Public auction id", auctionId);
-                
-                if (!auction) continue;
-                
-                // Skip if auction is redeemed
-                if (auction.redeemed) continue;
-
-                console.log("Auction winer: ", auction.winner);
-                console.log("Auction metadata: ", auction.metadata);
-                
-                // Fetch metadata for this auction
-                if (auction.metadata) {
-                    fetchAuctionMetadata(auctionId, auction.metadata);
-                }
-                
-                processedData[bid.id] = {
-                    id: bid.id,
-                    auctionId: auctionId,
-                    amount: bid.amount,
-                    isPublic: bid.isPublic,
-                    name: convertFieldToString(auction.name),
-                    metadata: auction.metadata,
-                    auctioneer: auction.auctioneer,
-                    highestBid: auction.highestBid || 0,
-                    startingBid: auction.startingBid,
-                    isPublicAuction: auction.isPublic,
-                    active: !auction.winner,
-                    redeemed: auction.redeemed
-                };
-            }
-
-            // Process private bids
-            for (const record of privateBids) {
-                try {
-                    const auctionId = filterVisibility(record.data.bid.auction_id);
-                    const auction = auctionState.auctions[auctionId];
-                    
-                    if (!auction) continue;
-                    
-                    // Skip if auction is redeemed
-                    if (auction.redeemed) continue;
-                    
-                    const bidId = filterVisibility(record.data.bid_id);
-                    const amount = parseInt(filterVisibility(record.data.bid.amount).replace('u64', ''));
-                    console.log("Private auction metadata", auction.metadata);
-                    
-                    // Fetch metadata for this auction
-                    if (auction.metadata) {
-                        fetchAuctionMetadata(auctionId, auction.metadata);
-                    }
-                    
-                    processedData[bidId] = {
-                        id: bidId,
-                        auctionId: auctionId,
-                        amount: amount,
-                        isPublic: false,
-                        name: auction.name,
-                        metadata: auction.metadata,
-                        auctioneer: auction.auctioneer,
-                        highestBid: auction.highestBid || 0,
-                        startingBid: auction.startingBid,
-                        isPublicAuction: auction.isPublic,
-                        active: !auction.winner,
-                        isWinner: auction.winner === bidId,
-                        redeemed: auction.redeemed,
-                        originalRecord: record
-                    };
-                } catch (error) {
-                    console.error('Error processing private bid:', error);
-                }
-            }
-
-            console.log("Processed Bid Data: ", processedData);
-            setBidData(processedData);
-        } catch (error) {
-            console.error('Error processing bid data:', error);
-        } finally {
-            setLoading(false);
-        }
+    // Process bid data whenever the auction state changes.
+    const processBidData = async () => {
+        const userBids = getUserBids();
+        const bidsWithMetadata = await addAuctionMetadataToBids(userBids);
+       setBidData(bidsWithMetadata);
     };
 
     const refreshData = async () => {
@@ -153,30 +29,20 @@ export const OpenBids = () => {
         try {
             // Update the private state
             if (connected) {
-                await updatePrivateAuctionState();
+                await updateAuctionState(true);
             }
             // Process the updated state
-            processBidData();
+            await processBidData();
         } catch (error) {
             console.error('Error refreshing bid data:', error);
+        } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        // Update the auction state when the component mounts
-        if (connected) {
-            updateAuctionStateOnConnect().then(() => {
-                processBidData();
-            });
-        }
-    }, [connected]);
-
     // Process bid data whenever the auction state changes
     useEffect(() => {
-        if (Object.keys(auctionState.auctions || {}).length > 0) {
-            processBidData();
-        }
+        processBidData();
     }, [auctionState]);
 
     return (
@@ -197,8 +63,7 @@ export const OpenBids = () => {
                 dataSource={Object.entries(bidData)}
                 renderItem={([bidId, bid]) => {
                     const shortAuctionId = `${bid.auctionId.substring(0, 20)}...field`;
-                    const auctionImage = auctionMetadata[bid.auctionId]?.image;
-                    console.log("Bid data: ", bid);
+                    const auctionImage = bid?.metadata?.image;
 
                     return (
                         <Card size="small" style={{ marginBottom: 16 }}>
@@ -231,11 +96,14 @@ export const OpenBids = () => {
                                             </Text>
                                         )}
                                         <Space>
-                                            <Tag color={bid.isPublic ? 'blue' : 'purple'}>
-                                                {bid.isPublic ? 'Public' : 'Private'} Bid
+                                            <Tag color={bid.isAuctionPublic ? 'green' : 'red'}>
+                                                {bid.isAuctionPublic ? 'Public Auction' : 'Private Auction'}
                                             </Tag>
-                                            <Tag color={bid.active ? 'green' : 'red'}>
-                                                {bid.active ? 'Open' : 'Closed'}
+                                            <Tag color={bid.isPublic ? 'blue' : 'purple'}>
+                                                {bid.isPublic ? 'Public Bid' : 'Private Bid'} Bid
+                                            </Tag>
+                                            <Tag color={bid.isAuctionActive ? 'green' : 'red'}>
+                                                {bid.isAuctionActive ? 'Open' : 'Closed'}
                                             </Tag>
                                             {bid.isWinner && (
                                                 <Tag color='green'>

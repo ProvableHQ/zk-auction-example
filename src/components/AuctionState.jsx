@@ -4,7 +4,7 @@ import { updateStateFromRecords } from "../core/reducers/demox.js";
 import { parseImages } from "../core/reducers/images.js";
 import { PROGRAM_ID } from "../core/constants.js";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
-import {fieldsToString} from "../core/encoder.js";
+import {convertFieldToString, fieldsToString} from "../core/encoder.js";
 import {filterVisibility, filterVisibility as f} from "../core/processing.js";
 
 
@@ -149,6 +149,47 @@ export const AuctionState = ({ children }) => {
         return highestAmount;
     }
 
+    const getUserBids = () => {
+        const bids = {};
+        Object.keys(auctionState.bids).forEach(bid_id => {
+            const bid = auctionState.bids[bid_id];
+            if (auctionState.userBidIds.has(bid_id)) {
+                bids[bid_id] = bid;
+            }
+        });
+        return bids;
+    }
+
+    const addAuctionMetadataToBids = async (bids) => {
+        const updatedBids = {};
+
+        // Properly iterate over the actual bid objects
+        for (const bid of Object.values(bids)) {
+            const auctionId = bid.auctionId;
+            const metadata = JSON.parse(await getAuctionMetadata(auctionId));
+            const auctionName = convertFieldToString(auctionState.auctions[auctionId]?.name);
+            const highestBid = findHighestBid(auctionId);
+            const isHighestBid = highestBid === bid.amount;
+            const isAuctionPublic = (auctionState.auctions[auctionId]?.privacy === "1field");
+            const isAuctionActive = !auctionState.auctions[auctionId]?.winner;
+            const winner = auctionState.auctions[auctionId]?.winner === bid.id;
+            const redeemed = auctionState.auctions[auctionId]?.redeemed;
+            updatedBids[bid.id] = {
+                ...bid,
+                metadata,
+                auctionName,
+                highestBid,
+                isHighestBid,
+                isAuctionPublic,
+                isAuctionActive,
+                winner,
+                redeemed,
+            };
+        }
+
+        return updatedBids;
+    };
+
     const updateAuctionStateFromRecords = (records) => {
         setAuctionState(prev => {
             const privateState = updateStateFromRecords(prev, records);
@@ -222,11 +263,13 @@ export const AuctionState = ({ children }) => {
 
     return (
         <DataContext.Provider 
-            value={{ 
+            value={{
+                addAuctionMetadataToBids,
                 auctionState,
                 getAuctionState,
                 getAuctionMetadata,
                 getAuctionBids,
+                getUserBids,
                 findHighestBid,
                 updateAuctionState,
                 updateAuctionStateOnConnect,

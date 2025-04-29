@@ -162,6 +162,7 @@ function parsePublicBidState(state, publicBids) {
         {
             key: 'public_bids',
             fn: (acc, { id, data }) => {
+                const prev = state.bids?.[id] ?? {};
                 acc[id] = {
                     ...acc[id],
                     id,
@@ -169,7 +170,7 @@ function parsePublicBidState(state, publicBids) {
                     auctionId: data.auction_id,
                     isPublic: true,
                     publicKey: data.bid_public_key,
-                    owner: "",
+                    owner: prev.owner || "",
                 };
                 return acc;
             },
@@ -177,7 +178,8 @@ function parsePublicBidState(state, publicBids) {
         {
             key: 'public_bid_owners',
             fn: (acc, { id, data }) => {
-                acc[id] = { ...acc[id], owner: data };
+                const prev = state.bids?.[id] ?? {};
+                acc[id] = { ...acc[id], owner: prev.owner || data };
                 return acc;
             },
         },
@@ -196,15 +198,17 @@ function parsePublicBidState(state, publicBids) {
             fn: (acc) => {
                 for (const [id, bid] of Object.entries(acc)) {
                     const prev = state.bids?.[id] ?? {};
+                    const auctionId = bid.auctionId ?? prev.auctionId ?? "";
+                    const auctioneer = state.auctions?.[auctionId]?.auctioneer ?? "";
 
                     acc[id] = {
                         ...bid,
                         id,
-                        auctionId: bid.auctionId ?? prev.auctionId ?? "",
+                        auctionId: auctionId,
                         isPublic: bid.isPublic ?? prev.isPublic ?? false,
                         winner: bid.winner ?? prev.winner ?? false,
                         amount: bid.amount ?? prev.amount ?? 0,
-                        auctioneer: bid.auctioneer ?? prev.auctioneer ?? "",
+                        auctioneer: auctioneer,
                     };
                 }
                 return acc;

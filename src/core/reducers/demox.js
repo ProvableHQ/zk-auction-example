@@ -235,7 +235,7 @@ function newBidFromReceipt(state, record) {
         amount: parseInt(f(record.data.bid.amount).replace("u64", "")),
         isPublic: false,
         owner: record.owner,
-        publicKey: f(record.data.bid_public_key),
+        publicKey: f(record.data.bid.bid_public_key),
         id: f(record.data.bid_id),
     };
 }
