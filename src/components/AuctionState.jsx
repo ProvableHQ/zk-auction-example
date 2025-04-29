@@ -41,22 +41,9 @@ export const AuctionState = ({ children }) => {
 
     // Effect to request records once when wallet is connected
     useEffect(() => {
-        const fetchRecords = async () => {
-            if (connected && !auctionState.hasLoaded) {
-                try {
-                    const records = await requestRecords(PROGRAM_ID);
-                    updateAuctionStateFromRecords(records);
-                    setAuctionState(prev => ({
-                        ...prev,
-                        hasLoaded: true
-                    }));
-                } catch (error) {
-                    console.error("Error fetching records:", error);
-                }
-            }
-        };
-
-        fetchRecords();
+        if (connected && !auctionState.hasLoaded) {
+            updateAuctionState(true);
+        }
     }, [connected]);
 
     const updatePublicAuctionState = async () => {
