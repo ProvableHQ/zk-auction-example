@@ -53,7 +53,7 @@ export const InvitedAuctions = () => {
                 renderItem={(invite) => (
                     <AuctionCard auctionData={invite.auction} loading={loading} />
                 )}
-                locale={{ emptyText: connected ? 'No auction invites found' : 'Please connect your wallet' }}
+                locale={{ emptyText: connected ? 'When someone invites you to an auction, they will appear here!' : 'Please connect your wallet' }}
             />
         </Card>
     );

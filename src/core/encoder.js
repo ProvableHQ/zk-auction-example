@@ -123,11 +123,11 @@ function fieldsToString(fields) {
 const privacySetting = (bidType) => {
   switch (bidType) {
     case '0field':
-      return 'Private Only';
+      return '🔐 Private Only';
     case '1field':
-      return 'Public Only';
+      return '🌐 Public Only';
     case '2field':
-      return 'Private & Public';
+      return '🔀 Private & Public';
     default:
       return 'Unknown';
   }

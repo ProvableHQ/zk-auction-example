@@ -209,14 +209,14 @@ export const CreateAuction = () => {
 
                         <Form.Item
                             name="startingBid"
-                            label="Starting Bid Amount"
+                            label="Starting Bid Amount (ALEO Microcredits)"
                             rules={[{ required: true, message: 'Please enter a starting bid in ALEO microcredits' }]}
                         >
                             <InputNumber
-                                min={1}
+                                min={0}
                                 placeholder="Enter starting bid amount (ALEO microcredits)"
                                 style={{ width: '100%' }}
-                                defaultValue={10000}
+                                defaultValue={0}
                             />
                         </Form.Item>
 
