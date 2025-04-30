@@ -14,29 +14,23 @@ export const ActiveBids = () => {
     const [loading, setLoading] = useState(false);
     const [bids, setBids] = useState([]);
 
-    const processBidData = async () => {
-        const bids = auctionState.bids || {};
-        const bidsWithMetadata = await addAuctionMetadataToBids(bids);
-        console.log('bidsWithMetadata', bidsWithMetadata);
-        setBids(bidsWithMetadata);
-    };
-
     const refreshData = async () => {
         setLoading(true);
         try {
             // Update the public state
             await updatePublicAuctionState();
             // Process the updated state
-            processBidData();
+            setBids(await addAuctionMetadataToBids(auctionState.bids || {}));
         } catch (error) {
             console.error('Error refreshing bid data:', error);
+        } finally {
             setLoading(false);
         }
     };
 
     // Process bid data whenever the auction state changes
     useEffect(() => {
-        processBidData();
+        addAuctionMetadataToBids(auctionState.bids || {}).then(bids => setBids(bids));
     }, [auctionState]);
 
     return (

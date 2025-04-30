@@ -30,7 +30,7 @@ const appConfig = {
         rules: [
             {
                 test: /\.(js|jsx)$/,
-                exclude: /nodeModules/,
+                exclude: /node_modules/,
                 use: {
                     loader: "babel-loader",
                 },
