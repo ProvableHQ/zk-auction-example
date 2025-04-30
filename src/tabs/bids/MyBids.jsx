@@ -11,7 +11,7 @@ const { Text } = Typography;
 const { Option } = Select;
 const { TabPane } = Tabs;
 
-export const OpenBids = () => {
+export const MyBids = () => {
     // Define local state.
     const [loading, setLoading] = useState(false);
     const [bids, setBids] = useState({});
