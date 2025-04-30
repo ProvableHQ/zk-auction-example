@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, List, Typography, Button } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
-import { PROGRAM_ID } from '../../core/constants.js';
-import { filterVisibility as f } from '../../core/processing.js';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 import { useAuctionState } from '../../components/AuctionState.jsx';
 import { AuctionCard } from '../../components/AuctionCard.jsx';
