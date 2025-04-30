@@ -29,7 +29,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
     // Local hooks.
     const { publicKey, requestTransaction } = useWallet();
     const { auctionState, findHighestBid, getAuctionBids, getAuctionMetadata } = useAuctionState();
-    const displayId = convertFieldToString(data.name) || auctionId.substring(0, 20) + '...';
+    const acceptsPublicBids = data.bidTypes === '1field' || data.bidTypes === '2field';
 
     useEffect(() => {
         const fetchMetadata = async () => {
@@ -175,13 +175,24 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                             </Row>
                             <Row gutter={[16, 16]} style={{ marginTop: '16px' }}>
                                 <Col span={8}>
-                                    <Statistic title="Private Bids" value={privateBids().length} />
+                                    {isOwner() ? (
+                                        <Statistic title="Private Bids" value={privateBids().length} />
+                                    ) : (
+                                        <Statistic
+                                            title="Private Bids"
+                                            value="🔒"
+                                            suffix={<span style={{ color: '#999' }}>Private</span>}
+                                        />
+                                    )}
+                                </Col>
+                                <Col span={8}>
+                                    <Statistic
+                                        title="Your Private Bids"
+                                        value={privateBids().length}
+                                    />
                                 </Col>
                                 <Col span={8}>
                                     <Statistic title="Public Bids" value={publicBids().length} />
-                                </Col>
-                                <Col span={8}>
-                                    <Statistic title="Total Bids" value={privateBids().length + publicBids().length} />
                                 </Col>
                             </Row>
                         </Col>
@@ -214,6 +225,29 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
 
                     <Tabs defaultActiveKey="1">
                         <TabPane tab="Private Bids" key="1">
+                            {isOwner() ? (
+                                <List
+                                    dataSource={privateBids()}
+                                    renderItem={bid => (
+                                        <AuctionBidCard
+                                            bid={bid}
+                                            isOwner={isOwner()}
+                                            isPrivate={true}
+                                            isActive={auctionState[auctionId]?.active}
+                                            handleSelectWinner={handleSelectWinner}
+                                            highestBidAmount={findHighestBid(auctionId)}
+                                        />
+                                    )}
+                                    locale={{ emptyText: 'No private bids yet' }}
+                                />
+                            ) : (
+                                <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
+                                    🔐 This auction's private bids are only visible to the auction owner.
+                                </div>
+                            )}
+                        </TabPane>
+
+                        <TabPane tab="Your Private Bids" key="2">
                             <List
                                 dataSource={privateBids()}
                                 renderItem={bid => (
@@ -226,25 +260,34 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                                         highestBidAmount={findHighestBid(auctionId)}
                                     />
                                 )}
-                                locale={{ emptyText: 'No private bids yet' }}
+                                locale={{ emptyText: '🔐 You haven\'t made any private bids on this auction' }}
                             />
                         </TabPane>
-                        <TabPane tab="Public Bids" key="2">
-                            <List
-                                dataSource={publicBids()}
-                                renderItem={bid => (
-                                    <AuctionBidCard
-                                        bid={bid}
-                                        isOwner={isOwner()}
-                                        isPrivate={true}
-                                        isActive={auctionState[auctionId]?.active}
-                                        handleSelectWinner={handleSelectWinner}
-                                        highestBidAmount={findHighestBid(auctionId)}
-                                    />
-                                )}
-                                locale={{ emptyText: 'No private bids yet' }}
-                            />
-                        </TabPane>
+
+                        {acceptsPublicBids ? (
+                            <TabPane tab="Public Bids" key="3">
+                                <List
+                                    dataSource={publicBids()}
+                                    renderItem={bid => (
+                                        <AuctionBidCard
+                                            bid={bid}
+                                            isOwner={isOwner()}
+                                            isPrivate={true}
+                                            isActive={auctionState[auctionId]?.active}
+                                            handleSelectWinner={handleSelectWinner}
+                                            highestBidAmount={findHighestBid(auctionId)}
+                                        />
+                                    )}
+                                    locale={{ emptyText: 'No public bids yet' }}
+                                />
+                            </TabPane>
+                        ) : (
+                            <TabPane tab="Public Bids 🚫" key="3" disabled>
+                                <div style={{ padding: '2rem', textAlign: 'center', color: '#999' }}>
+                                    This auction only accepts private bids. Public bids are disabled to preserve bidder privacy 🕵️‍♂️
+                                </div>
+                            </TabPane>
+                        )}
                     </Tabs>
                 </Col>
             </Row>

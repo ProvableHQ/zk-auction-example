@@ -1,6 +1,5 @@
 import React from 'react';
-import { Tabs, Card } from 'antd';
-import { OpenBids } from './components/OpenBids';
+import { Card } from 'antd';
 import { ActiveBids } from './components/ActiveBids';
 
 export const BidFeed = () => {

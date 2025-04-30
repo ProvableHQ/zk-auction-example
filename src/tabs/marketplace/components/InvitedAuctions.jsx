@@ -1,70 +1,54 @@
 import React, { useState, useEffect } from 'react';
-import { Card, List, Typography, Button } from 'antd';
+import { Card, List, Button } from 'antd';
 import { ReloadOutlined } from '@ant-design/icons';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
-import { useAuctionState } from '../../components/AuctionState.jsx';
-import { AuctionCard } from '../../components/AuctionCard.jsx';
-import { WalletMultiButton } from "@demox-labs/aleo-wallet-adapter-reactui";
+import { PROGRAM_ID } from '../../../core/constants';
+import { AuctionCard } from '../../../components/AuctionCard';
+import { filterVisibility } from '../../../core/processing';
+import {useAuctionState} from "../../../components/AuctionState.jsx";
+import {WalletMultiButton} from "@demox-labs/aleo-wallet-adapter-reactui";
 
+import { Typography } from 'antd';
 const { Text } = Typography;
 
-export const OpenAuctions = () => {
+export const InvitedAuctions = () => {
     const { connected, publicKey } = useWallet();
-    const { auctionState, updateAuctionStateOnConnect, updatePrivateAuctionState, updatePublicAuctionState } = useAuctionState();
+    const { auctionState, updatePrivateAuctionState } = useAuctionState();
     const [loading, setLoading] = useState(false);
-    const [auctionData, setAuctionData] = useState({});
+    const [auctionData, setAuctionData] = useState([]);
 
+    // Find the latest invited bids and set them.
     const processAuctionData = () => {
         setLoading(true);
         try {
-            const processedData = {};
-
-            // Get auctions owned by the current user
-            const userAuctions = Object.entries(auctionState.auctions || {})
-                .filter(([_, auction]) => auction.auctioneer === publicKey);
-            
-            for (const [auctionId, auction] of userAuctions) {
-                // Skip redeemed auctions
-                if (auction.redeemed) continue;
-
-                // Create the data object for AuctionCard
-                processedData[auctionId] = auction;
-            }
-
-            setAuctionData(processedData);
+            const inviteIds = new Set(auctionState.bidInvites.filter(invite => filterVisibility(invite.data.auction_id)));
+            const invitedAuctions = Object.entries(auctionState.auctions || {})
+                .filter(([_, auction]) => inviteIds.has(auction.id))
+            setAuctionData(invitedAuctions);
         } catch (error) {
             console.error('Error processing auction data:', error);
-        } finally {
-            setLoading(false);
         }
+        setLoading(false);
     };
 
+    // Update the auction state when the component mounts or when the wallet connection changes.
     const refreshData = async () => {
         setLoading(true);
         try {
-            // Update both private and public state
             if (connected) {
                 await updatePrivateAuctionState();
             }
-            await updatePublicAuctionState();
             // Process the updated state
             processAuctionData();
         } catch (error) {
             console.error('Error refreshing auction data:', error);
-            setLoading(false);
         }
+        setLoading(false);
     };
-
-    // Process auction data whenever the auction state changes
-    useEffect(() => {
-        if (Object.keys(auctionState.auctions || {}).length > 0) {
-            processAuctionData();
-        }
-    }, [auctionState]);
 
     return (
         <Card
-            title="My Auctions"
+            title="Auctions You've Been Invited To"
             extra={
                 <Button
                     icon={<ReloadOutlined />}
@@ -88,9 +72,9 @@ export const OpenAuctions = () => {
                     renderItem={([auctionId, data]) => (
                         <AuctionCard auctionId={auctionId} data={data} loading={loading} />
                     )}
-                    locale={{ emptyText: 'No open auctions found' }}
+                    locale={{ emptyText: 'Once someone invites you to an auction, auction information will appear here' }}
                 />
             )}
         </Card>
     );
-};
+}; 

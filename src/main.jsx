@@ -11,26 +11,25 @@ import {
     OrderedListOutlined,
     SwapOutlined,
 } from "@ant-design/icons";
-import { WasmLoadingMessage } from "./components/WasmLoadingMessage.jsx";
 import {WalletMultiButton} from "@demox-labs/aleo-wallet-adapter-reactui";
 
 const { Content, Footer, Sider } = Layout;
 
 const menuItems = [
     {
-        label: <Link to="/auctioneer">Create Auction</Link>,
+        label: <Link to="/auctioneer">My Auctions</Link>,
         key: "auctioneer",
         icon: <AuditOutlined />,
-    },
-    {
-        label: <Link to="/marketplace">Marketplace</Link>,
-        key: "marketplace",
-        icon: <SwapOutlined />,
     },
     {
         label: <Link to="/bids">My Bids</Link>,
         key: "bids",
         icon: <OrderedListOutlined />,
+    },
+    {
+        label: <Link to="/marketplace">Marketplace</Link>,
+        key: "marketplace",
+        icon: <SwapOutlined />,
     },
 ];
 function Main() {
