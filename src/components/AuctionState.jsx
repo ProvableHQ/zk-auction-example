@@ -310,6 +310,17 @@ export const AuctionState = ({ children }) => {
         return bids;
     }
 
+    // Get the bid receipt matching the bid ID.
+    const getBidReceipt = (bidId) => {
+        console.log(auctionState.bidReceipts);
+        return auctionState.bidReceipts.find(receipt => f(receipt.data?.bid_id) === bidId);
+    }
+
+    // Get the auction invite matching the auction ID.
+    const getAuctionInvites = (auctionId) => {
+        return auctionState.bidInvites.find(receipt => f(receipt.data?.auction_id) === auctionId);
+    }
+
     return (
         <DataContext.Provider 
             value={{
@@ -318,6 +329,8 @@ export const AuctionState = ({ children }) => {
                 getAuctionState,
                 getAuctionMetadata,
                 getAuctionBids,
+                getAuctionInvites,
+                getBidReceipt,
                 getUserBids,
                 findHighestBid,
                 updateAuctionState,
