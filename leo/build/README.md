@@ -1,4 +1,4 @@
-# private_auction_test_2.aleo
+# private_auction_test_3.aleo
 
 ## Build Guide
 

@@ -3,28 +3,24 @@ import { Modal, Form, Input, Button } from 'antd';
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { Transaction, WalletAdapterNetwork } from "@demox-labs/aleo-wallet-adapter-base";
 import { PROGRAM_ID } from '../core/constants';
+import {EventType, requestCreateEvent} from "@puzzlehq/sdk-core";
+import {createTransaction} from "../core/transaction.js";
 
 export const InviteForm = ({ visible, onCancel, ticketRecord }) => {
-    const { publicKey, requestTransaction, requestRecords } = useWallet();
+    const { publicKey, requestTransaction, wallet } = useWallet();
     const [form] = Form.useForm();
 
     const handleSubmit = async (values) => {
         try {
             const inputs = [ticketRecord, values.inviteeAddress];
             console.log("Inputs for Invite:", inputs);
-            const transaction = Transaction.createTransaction(
-                publicKey,
-                WalletAdapterNetwork.TestnetBeta,
-                PROGRAM_ID,
-                'invite_to_auction',
-                [ticketRecord, "aleo1cuu3zmcsrfnu9mk32nvzjhfjty9kjvxl0p6cty6ewefp95hgqvfqmhe5pl"],
-                70000,
-                false,
-            );
-
-            console.log(transaction);
-            
-            await requestTransaction(transaction);
+            if (wallet?.adapter?.name === "Puzzle Wallet") {
+                const params = {type: EventType.Execute, programId: PROGRAM_ID, functionId: 'invite_to_auction', fee: .07, inputs}
+                await createTransaction(params, requestCreateEvent, wallet?.adapter?.name);
+            } else {
+                const params = {publicKey, functionName: 'invite_to_auction', inputs, fee: 70000, feePrivate: false};
+                await createTransaction(params, requestTransaction, wallet?.adapter?.name);
+            }
             onCancel();
         } catch (error) {
             console.error('Error sending invite:', error);

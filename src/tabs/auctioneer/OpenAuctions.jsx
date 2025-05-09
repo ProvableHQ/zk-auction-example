@@ -5,6 +5,7 @@ import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
 import { useAuctionState } from '../../components/AuctionState.jsx';
 import { AuctionCard } from '../../components/AuctionCard.jsx';
 import { WalletMultiButton } from "@demox-labs/aleo-wallet-adapter-reactui";
+import {PROGRAM_ID} from "../../core/constants.js";
 
 const { Text } = Typography;
 
@@ -42,7 +43,6 @@ export const OpenAuctions = () => {
     const refreshData = async () => {
         setLoading(true);
         try {
-            // Update both private and public state
             if (connected) {
                 await updatePrivateAuctionState();
             }

@@ -4,8 +4,12 @@ import { ReloadOutlined, TrophyOutlined } from '@ant-design/icons';
 import { UserBid } from '../../components/UserBid.jsx';
 import { RedemptionModal } from '../../components/RedemptionModal.jsx';
 import { useWallet } from '@demox-labs/aleo-wallet-adapter-react';
+import { requestCreateEvent } from '@puzzlehq/sdk';
 import { useAuctionState } from '../../components/AuctionState.jsx';
 import {WalletMultiButton} from "@demox-labs/aleo-wallet-adapter-reactui";
+import {createTransaction} from "../../core/transaction.js";
+import {EventType} from "@puzzlehq/sdk-core";
+import {PROGRAM_ID} from "../../core/constants.js";
 
 const { Text } = Typography;
 const { Option } = Select;
@@ -28,8 +32,8 @@ export const MyBids = () => {
     const [viewMode, setViewMode] = useState('list');
 
     // Get info from hooks.
-    const { connected, publicKey } = useWallet();
-    const { auctionState, addAuctionMetadataToBids, getUserBids, updateAuctionState } = useAuctionState();
+    const { connected, publicKey, requestTransaction, wallet } = useWallet();
+    const { auctionState, addAuctionMetadataToBids, getUserBids, updateAuctionState, getBidReceipt, getAuctionInvite } = useAuctionState();
 
     // Process bid data whenever the auction state changes.
     const processBidData = async () => {
@@ -102,16 +106,31 @@ export const MyBids = () => {
         setRedemptionModalVisible(false);
         
         try {
-            // Here you would call the actual redemption function based on the method
-            // For example:
-            // if (redemptionMethod === 'public') {
-            //     await redeemBidPublic(selectedBid.auctionId, selectedBid.id);
-            // } else if (redemptionMethod === 'private_to_public') {
-            //     await redeemBidPrivateToPublic(selectedBid.auctionId, selectedBid.id);
-            // } else if (redemptionMethod === 'private') {
-            //     await redeemBidPrivate(selectedBid.auctionId, selectedBid.id);
-            // }
-            
+            let functionName = '';
+            let inputs = [];
+            console.log("Selected bid for redemption", selectedBid);
+            const bidReceipt = getBidReceipt(selectedBid.id);
+            console.log("Selected bid receipt", bidReceipt);
+            if (redemptionMethod === 'public') {
+                functionName = 'redeem_bid_public';
+                inputs = [auctionState.auctions[selectedBid.auctionId]?.auctioneer, bidReceipt];
+            } else if (redemptionMethod === 'private_to_public') {
+                functionName = 'redeem_bid_private_to_public';
+                inputs = [auctionState.auctions[selectedBid.auctionId]?.auctioneer, bidReceipt, ''];
+            } else if (redemptionMethod === 'private') {
+                const auctionInvite = getAuctionInvite(selectedBid.auctionId);
+                functionName = 'redeem_bid_private';
+                inputs = [auctionInvite, bidReceipt, ''];
+            }
+
+            if (wallet?.adapter?.name === "Puzzle Wallet") {
+                const params = {type: EventType.Execute, programId: PROGRAM_ID, functionId: functionName, fee: 0.25, inputs}
+                await createTransaction(params, requestCreateEvent, wallet?.adapter?.name);
+            } else {
+                const params = {publicKey, functionName, inputs, fee: 250000, feePrivate: false};
+                await createTransaction(params, requestTransaction, wallet?.adapter?.name);
+            }
+
             // For now, we'll just simulate a successful redemption
             await new Promise(resolve => setTimeout(resolve, 1000));
             

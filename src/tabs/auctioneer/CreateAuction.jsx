@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import {EventType, requestCreateEvent} from '@puzzlehq/sdk-core';
 import {
     Card,
     Form,
@@ -19,6 +20,7 @@ import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
 import { Transaction, WalletAdapterNetwork } from "@demox-labs/aleo-wallet-adapter-base";
 import { stringToFieldInputs, encodeStringAsField } from "../../core/encoder.js";
 import { PROGRAM_ID } from "../../core/constants.js";
+import { createTransaction } from "../../core/transaction.js"
 import { Field, Scalar } from "@provablehq/sdk";
 import { PlusOutlined } from '@ant-design/icons';
 
@@ -50,7 +52,7 @@ const PREDEFINED_ITEMS = [
 ];
 
 export const CreateAuction = () => {
-    const { publicKey, requestTransaction } = useWallet();
+    const { publicKey, requestTransaction, wallet } = useWallet();
     const [form] = Form.useForm();
     const [selectedItemData, setSelectedItemData] = useState(null);
     const [loading, setLoading] = useState(false);
@@ -95,9 +97,6 @@ export const CreateAuction = () => {
                 throw new Error('No item selected');
             }
 
-            // Generate a random nonce (you might want to implement a more secure way)
-            const nonce = Math.floor(Math.random() * 1000000);
-
             // Encode the auction name as a field
             const encodedName = encodeStringAsField(values.auctionName);
 
@@ -130,21 +129,16 @@ export const CreateAuction = () => {
                 ];
             }
 
-            console.log(`Inputs:`, inputs);
-
-            // Create the transaction
-            const transaction = Transaction.createTransaction(
-                publicKey,
-                WalletAdapterNetwork.TestnetBeta,
-                PROGRAM_ID,
-                values.auctionType === 'public' ? 'create_public_auction' : 'create_private_auction',
-                inputs,
-                values.auctionType === 'public' ? 137000 : 127000,
-                false,
-            );
-
-            // Request the transaction
-            await requestTransaction(transaction);
+            // Create the transaction.
+            const functionName = values.auctionType === 'public' ? 'create_public_auction' : 'create_private_auction';
+            const fee = values.auctionType === 'public' ? .137 : .127;
+            if (wallet?.adapter?.name === "Puzzle Wallet") {
+                const params = {type: EventType.Execute, programId: PROGRAM_ID, functionId: functionName, fee, inputs}
+                await createTransaction(params, requestCreateEvent, wallet?.adapter?.name);
+            } else {
+                const params = {publicKey, functionName, inputs, fee: fee*100000, feePrivate: false};
+                await createTransaction(params, requestTransaction, wallet?.adapter?.name);
+            }
 
         } catch (error) {
             console.error('Error creating auction:', error);

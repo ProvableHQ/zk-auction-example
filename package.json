@@ -23,6 +23,7 @@
         "@demox-labs/aleo-wallet-adapter-react": "^0.0.21",
         "@demox-labs/aleo-wallet-adapter-reactui": "^0.0.35",
         "@provablehq/sdk": "^0.8.8",
+        "@puzzlehq/sdk-core": "^1.0.3",
         "@uiw/codemirror-theme-noctis-lilac": "^4.23.7",
         "@uiw/codemirror-theme-okaidia": "^4.23.7",
         "@uiw/react-codemirror": "^4.23.7",
