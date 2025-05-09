@@ -161,7 +161,7 @@ function processAuctionTickets (state, auctionTickets, idKey, nameKey) {
             const auctionId = f(record.data.auction_id);
             if (!(auctionId in state)) {
                 auctions[auctionId] = newAuctionFromTicket(state, record, idKey, nameKey);
-            } else if (state[auctionId].activeTicket?.[idKey] !== record[idKey]) {
+            } else if (state.auctions[auctionId].activeTicket?.[idKey] !== record[idKey]) {
                 auctions[auctionId] = {
                     ...state[auctionId],
                     activeTicket: record,
@@ -177,10 +177,6 @@ function processAuctionTickets (state, auctionTickets, idKey, nameKey) {
 
 // Set auctioneer record from AuctionTicket.
 function newAuctionFromTicket (state, record, idKey, nameKey) {
-    console.log("Creating auction from ticket", record);
-    console.log("idKey, idKeyValue: ", idKey, record[idKey]);
-    console.log("Namekey, nameKeyValue ", nameKey, record[nameKey]);
-
     // Ensure the record is an AuctionTicket.
     if (record[nameKey] !== "AuctionTicket") {
         throw new Error("Attempt to add new AuctionTicket record to state failed. Record is not an AuctionTicket");

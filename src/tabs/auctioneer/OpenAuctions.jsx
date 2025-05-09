@@ -10,7 +10,7 @@ import {PROGRAM_ID} from "../../core/constants.js";
 const { Text } = Typography;
 
 export const OpenAuctions = () => {
-    const { connected, publicKey, requestRecords, wallet } = useWallet();
+    const { connected, publicKey } = useWallet();
     const { auctionState, updateAuctionStateOnConnect, updatePrivateAuctionState, updatePublicAuctionState } = useAuctionState();
     const [loading, setLoading] = useState(false);
     const [auctionData, setAuctionData] = useState({});
@@ -43,10 +43,6 @@ export const OpenAuctions = () => {
     const refreshData = async () => {
         setLoading(true);
         try {
-            // Update both private and public state
-            let records = await requestRecords(PROGRAM_ID);
-
-            console.log(`Demox adapter with Puzzle Wallet data publicKey: ${publicKey}, connected: ${connected}, records: `, records);
             if (connected) {
                 await updatePrivateAuctionState();
             }

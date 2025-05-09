@@ -2,6 +2,8 @@ import { Transaction, WalletAdapterNetwork } from "@demox-labs/aleo-wallet-adapt
 import {PROGRAM_ID} from "./constants.js";
 
 export async function createTransaction(params, execute, walletName) {
+    console.log("Creating transactions with", walletName, "with params:", params);
+
     if (walletName === "Puzzle Wallet") {
         // Create a transaction using the Puzzle Wallet SDK by calling the createEvent function.
         const createEventResponse = await execute(params)

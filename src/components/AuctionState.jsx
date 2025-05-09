@@ -4,6 +4,7 @@ import { updateStateFromRecords } from "../core/reducers/private.js";
 import { parseImages } from "../core/reducers/images.js";
 import { PROGRAM_ID } from "../core/constants.js";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import { getRecords, Network } from '@puzzlehq/sdk';
 import {convertFieldToString, fieldsToString} from "../core/encoder.js";
 import {filterVisibility, filterVisibility as f} from "../core/processing.js";
 
@@ -237,8 +238,33 @@ export const AuctionState = ({ children }) => {
     const updatePrivateAuctionState = async () => {
         console.log("Updating private auction state...");
         try {
-            const records = await requestRecords(PROGRAM_ID);
-            console.log("Fetched records:", records);
+            let records = [];
+            if (wallet?.adapter?.name === "Puzzle Wallet") {
+                // Page through puzzle records.
+                console.log("Fetching records from Puzzle Wallet");
+                try {
+                    // Attempt to get puzzle records.
+                    const response = await getRecords({
+                        address: "aleo12a4wll9ax6w5355jph0dr5wt2vla5sss2t4cnch0tc3vzh643v8qcfvc7a",
+                        network: Network.AleoTestnet,
+                        filter: {
+                            programIds: [PROGRAM_ID],
+                            status: 'All'
+                        },
+                    });
+                    console.log(`Records fetched from the Puzzle Wallet:`, response.records);
+
+                    // Push the records to the array.
+                    records.push(...response.records);
+                    console.log(`Fetched ${response.records.length} records from the Puzzle Wallet`);
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                } catch (error) {
+                    console.log("Error fetching records from Puzzle Wallet at page", error);
+                }
+            } else {
+                console.log("Fetching records from Demox Wallet");
+                records = await requestRecords(PROGRAM_ID);
+            }
             updateAuctionStateFromRecords(records);
         } catch (error) {
             console.error("Error fetching records:", error);
