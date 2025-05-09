@@ -1,20 +1,22 @@
 import React from 'react';
 import { Modal, Form, InputNumber, Button, Checkbox } from 'antd';
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import {EventType, requestCreateEvent} from "@puzzlehq/sdk-core";
 import { Transaction, WalletAdapterNetwork } from "@demox-labs/aleo-wallet-adapter-base";
 import { PROGRAM_ID } from '../core/constants';
 import { Scalar } from '@provablehq/sdk';
+import {createTransaction} from "../core/transaction.js";
 
 export const BidForm = ({ visible, onCancel, auctionData, bidType }) => {
     const [ showAddress, setShowAddress ] = React.useState(false);
-    const { publicKey, requestTransaction } = useWallet();
+    const { publicKey, requestTransaction, wallet } = useWallet();
     const [form] = Form.useForm();
 
     const handleSubmit = async (values) => {
         try {
-            // Generate a random nonce
+            // Generate input parameters.
+            const functionName = bidType === 'private' ? 'bid_private' : 'bid_public';
             const nonce = Scalar.random().toString();
-            
             let inputs = [];
 
             if (bidType === 'private') {
@@ -25,19 +27,6 @@ export const BidForm = ({ visible, onCancel, auctionData, bidType }) => {
                     "2group",
                     nonce,
                 ];
-
-                console.log("Inputs for Private Bid:", inputs);
-                const transaction = Transaction.createTransaction(
-                    publicKey,
-                    WalletAdapterNetwork.TestnetBeta,
-                    PROGRAM_ID,
-                    'bid_private',
-                    inputs,
-                    90000,
-                    false,
-                );
-                
-                await requestTransaction(transaction);
             } else {
                 inputs = [
                     values.amount.toString() + "u64",
@@ -45,20 +34,14 @@ export const BidForm = ({ visible, onCancel, auctionData, bidType }) => {
                     nonce,
                     values.publishAddress?.toString() || "false", // Optional: show bidder address
                 ];
-                console.log(values);
-                console.log(bidType);
-                
-                const transaction = Transaction.createTransaction(
-                    publicKey,
-                    WalletAdapterNetwork.TestnetBeta,
-                    PROGRAM_ID,
-                    'bid_public',
-                    inputs,
-                    90000,
-                    false,
-                );
-                
-                await requestTransaction(transaction);
+            }
+
+            if (wallet?.adapter?.name === "Puzzle Wallet") {
+                const params = {type: EventType.Execute, programId: PROGRAM_ID, functionId: functionName, fee: 0.09, inputs}
+                await createTransaction(params, requestCreateEvent, wallet?.adapter?.name);
+            } else {
+                const params = {publicKey, functionName, inputs, fee: 90000, feePrivate: false};
+                await createTransaction(params, requestTransaction, wallet?.adapter?.name);
             }
 
             form.resetFields();

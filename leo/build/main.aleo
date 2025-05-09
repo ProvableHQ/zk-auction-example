@@ -25,6 +25,7 @@ record AuctionInvite:
     auction as auction.private;
     auctioneer as address.private;
     auction_id as field.private;
+    settings as privacy_settings.private;
 
 struct bid:
     amount as u64;
@@ -192,7 +193,7 @@ finalize publish_auction_data:
 function invite_to_auction:
     input r0 as AuctionTicket.record;
     input r1 as address.private;
-    cast r1 r0.auction r0.owner r0.auction_id into r2 as AuctionInvite.record;
+    cast r1 r0.auction r0.owner r0.auction_id r0.settings into r2 as AuctionInvite.record;
     output r2 as AuctionInvite.record;
     output r0 as AuctionTicket.record;
 

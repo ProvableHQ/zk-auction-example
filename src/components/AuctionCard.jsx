@@ -10,10 +10,8 @@ import { PROGRAM_ID } from '../core/constants';
 import { useAuctionState } from './AuctionState.jsx';
 import { AuctionStatusTags } from './AuctionStatusTags.jsx';
 import { AuctionBidCard } from './AuctionBidCard.jsx';
-import {
-    CheckOutlined
-} from '@ant-design/icons';
-
+import {EventType, requestCreateEvent} from "@puzzlehq/sdk-core";
+import {createTransaction} from "../core/transaction.js";
 
 const { Title, Text } = Typography;
 const { TabPane } = Tabs;
@@ -24,7 +22,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
     const [bidFormVisible, setBidFormVisible] = useState(false);
     const [bidType, setBidType] = useState(null);
     const [inviteFormVisible, setInviteFormVisible] = useState(false);
-    const {connected} = useWallet();
+    const {connected, wallet} = useWallet();
 
     // Local hooks.
     const { publicKey, requestTransaction } = useWallet();
@@ -70,32 +68,26 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
             const inputs = isPrivate ?
                 // Inputs for private winner selection
                 [
-                    data.ticketRecord,     // Use original AuctionTicket record
+                    data.activeTicket,     // Use original AuctionTicket record
                     auctionState.privateBids.filter(privateBid => {
                         return (f(privateBid.data.bid.auction_id) === bid.auctionId && f(privateBid.data.bid_id) === bid.id)
                     })[0],
                 ] :
                 // Inputs for public winner selection
                 [
-                    data.ticketRecord,     // Use original AuctionTicket record
+                    data.activeTicket,     // Use original AuctionTicket record
                     `{\n  amount: ${bid.amount}u64,\n  auction_id: ${bid.auctionId},\n  bid_public_key: ${bid.publicKey}\n}`, // Use original PublicBid record
                     bid.id,          // winning_bid_id
                 ];
-            
-            console.log('Inputs:', inputs);
+            const functionName = isPrivate ? 'select_winner_private' : 'select_winner_public';
 
-            const transaction = Transaction.createTransaction(
-                publicKey,
-                WalletAdapterNetwork.TestnetBeta,
-                PROGRAM_ID,
-                isPrivate ? 'select_winner_private' : 'select_winner_public',
-                inputs,
-                100000, // Fee in credits
-                false,
-            );
-
-            const result = await requestTransaction(transaction);
-            console.log(`${isPrivate ? 'Private' : 'Public'} winner selection transaction:`, result);
+            if (wallet?.adapter?.name === "Puzzle Wallet") {
+                const params = {type: EventType.Execute, programId: PROGRAM_ID, functionId: functionName, fee: .1, inputs}
+                await createTransaction(params, requestCreateEvent, wallet?.adapter?.name);
+            } else {
+                const params = {publicKey, functionName, inputs, fee: 100000, feePrivate: false};
+                await createTransaction(params, requestTransaction, wallet?.adapter?.name);
+            }
         } catch (error) {
             console.error('Error selecting winner:', error);
         }
@@ -233,7 +225,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                                             bid={bid}
                                             isOwner={isOwner()}
                                             isPrivate={true}
-                                            isActive={auctionState[auctionId]?.active}
+                                            isActive={auctionState?.auctions[auctionId]?.active}
                                             handleSelectWinner={handleSelectWinner}
                                             highestBidAmount={findHighestBid(auctionId)}
                                         />
@@ -255,7 +247,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                                         bid={bid}
                                         isOwner={isOwner()}
                                         isPrivate={true}
-                                        isActive={auctionState[auctionId]?.active}
+                                        isActive={auctionState?.auctions[auctionId]?.active}
                                         handleSelectWinner={handleSelectWinner}
                                         highestBidAmount={findHighestBid(auctionId)}
                                     />
@@ -272,8 +264,8 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
                                         <AuctionBidCard
                                             bid={bid}
                                             isOwner={isOwner()}
-                                            isPrivate={true}
-                                            isActive={auctionState[auctionId]?.active}
+                                            isPrivate={false}
+                                            isActive={auctionState?.auctions[auctionId]?.active}
                                             handleSelectWinner={handleSelectWinner}
                                             highestBidAmount={findHighestBid(auctionId)}
                                         />
@@ -302,7 +294,7 @@ export const AuctionCard = ({ auctionId, data, loading }) => {
             {connected && <InviteForm
                 visible={inviteFormVisible}
                 onCancel={() => setInviteFormVisible(false)}
-                ticketRecord={data.ticketRecord}
+                ticketRecord={data.activeTicket}
             />}
         </Card>
     );

@@ -1,6 +1,6 @@
 import React, {createContext, useContext, useEffect, useState} from "react";
 import { updatePublicState } from "../core/reducers/public.js";
-import { updateStateFromRecords } from "../core/reducers/demox.js";
+import { updateStateFromRecords } from "../core/reducers/private.js";
 import { parseImages } from "../core/reducers/images.js";
 import { PROGRAM_ID } from "../core/constants.js";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
@@ -22,7 +22,7 @@ export const useAuctionState = () => {
 
 // Define the data structure
 export const AuctionState = ({ children }) => {
-    const { connected, requestRecords } = useWallet();
+    const { connected, requestRecords, wallet } = useWallet();
     const [auctionState, setAuctionState] = useState({
         auctions: {},
         bids: {},
@@ -210,8 +210,9 @@ export const AuctionState = ({ children }) => {
     };
 
     const updateAuctionStateFromRecords = (records) => {
+        const walletName = wallet?.adapter?.name;
         setAuctionState(prev => {
-            const privateState = updateStateFromRecords(prev, records);
+            const privateState = updateStateFromRecords(prev, records, walletName);
             const updatedState = {
                 ...prev,
                 ...privateState,
@@ -237,6 +238,7 @@ export const AuctionState = ({ children }) => {
         console.log("Updating private auction state...");
         try {
             const records = await requestRecords(PROGRAM_ID);
+            console.log("Fetched records:", records);
             updateAuctionStateFromRecords(records);
         } catch (error) {
             console.error("Error fetching records:", error);
