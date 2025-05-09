@@ -22,7 +22,7 @@ export const BidForm = ({ visible, onCancel, auctionData, bidType }) => {
             if (bidType === 'private') {
                 inputs = [
                     values.amount.toString() + "u64",
-                    auctionData.auctionId,
+                    auctionData.auctionId ? auctionData.auctionId : auctionData.id,
                     auctionData.auctioneer,
                     "2group",
                     nonce,
@@ -30,7 +30,7 @@ export const BidForm = ({ visible, onCancel, auctionData, bidType }) => {
             } else {
                 inputs = [
                     values.amount.toString() + "u64",
-                    auctionData.auctionId,
+                    uctionData.auctionId ? auctionData.auctionId : auctionData.id,
                     nonce,
                     values.publishAddress?.toString() || "false", // Optional: show bidder address
                 ];
