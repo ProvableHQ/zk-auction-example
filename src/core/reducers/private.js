@@ -11,7 +11,7 @@ function updateStateFromRecords(state, records, walletName) {
 
     const auctionTickets = records.filter(record => record[nameKey] === "AuctionTicket");
     const bidReceipts = records.filter(record => record[nameKey] === "BidReceipt");
-    const bidInvites = records.filter(record => record[nameKey] === "BidInvite");
+    const bidInvites = records.filter(record => record[nameKey] === "AuctionInvite");
     const privateBids = records.filter(record => record[nameKey] === "PrivateBid");
     const userAuctions = processAuctionTickets(state, auctionTickets, idKey, nameKey);
 

@@ -1,7 +1,7 @@
 import credits.aleo;
 
 // A an auction contract.
-program private_auction_test_2.aleo {
+program private_auction_test_3.aleo {
 
     ////////////////////////////////////////
     ///// ----- DATA DEFINITIONS ----- /////
@@ -377,7 +377,15 @@ program private_auction_test_2.aleo {
             settings: auction_ticket.settings,
         };
 
-        return (auction_invite, auction_ticket);
+        // Refresh the auction ticket.
+        let new_auction_ticket: AuctionTicket = AuctionTicket {
+            owner: auction_ticket.owner,
+            auction: auction_ticket.auction,
+            auction_id: auction_ticket.auction_id,
+            settings: auction_ticket.settings,
+        };
+
+        return (auction_invite, new_auction_ticket);
     }
 
     // Select winner a set of private bids. This function will select the highest bid from a set of private bids and
@@ -599,7 +607,7 @@ program private_auction_test_2.aleo {
         assert_eq(winning_bid_id, bid_id);
 
         // Ensure the bid hasn't been redeemed.
-        assert(!redemptions.get(auction_id));
+        assert(!redemptions.contains(auction_id));
 
         // Allow the transfer to complete.
         transfer.await();
@@ -637,7 +645,7 @@ program private_auction_test_2.aleo {
         assert_eq(winning_bid_id, bid_id);
 
         // Ensure the bid hasn't been redeemed.
-        assert(!redemptions.get(auction_id));
+        assert(!redemptions.contains(auction_id));
 
         // Allow the transfer to complete.
         transfer.await();
@@ -672,7 +680,7 @@ program private_auction_test_2.aleo {
         assert_eq(winning_bid_id, bid_id);
 
         // Ensure the bid hasn't been redeemed.
-        assert(!redemptions.get(auction_id));
+        assert(!redemptions.contains(auction_id));
 
        // Set the bid as redeemed.
         redemptions.set(auction_id, true);
