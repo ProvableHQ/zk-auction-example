@@ -3,14 +3,17 @@ import {PROGRAM_ID} from "./constants.js";
 
 export async function createTransaction(params, execute, walletName) {
     if (walletName === "Puzzle Wallet") {
-        // Create a transaction using the Puzzle Wallet SDK
+        // Create a transaction using the Puzzle Wallet SDK by calling the createEvent function.
         const createEventResponse = await execute(params)
+
+        // Handle the response from the Puzzle Wallet SDK.
         if (createEventResponse.error) {
             console.log(`Error creating event: ${createEventResponse.error}`);
         } else {
             console.log(`Transaction created successfully: ${createEventResponse.eventId}`);
         }
     } else {
+        // Create a transaction using the Leo wallet.
         const transaction = Transaction.createTransaction(
             params.publicKey,
             WalletAdapterNetwork.TestnetBeta,
@@ -21,9 +24,7 @@ export async function createTransaction(params, execute, walletName) {
             params.feePrivate,
         );
 
+        // Call the requestTransaction function on the Leo Wallet.
         await execute(transaction);
     }
-
-
-
 }
