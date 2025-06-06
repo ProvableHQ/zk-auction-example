@@ -245,7 +245,6 @@ export const AuctionState = ({ children }) => {
                 try {
                     // Attempt to get puzzle records.
                     const response = await getRecords({
-                        address: "aleo12a4wll9ax6w5355jph0dr5wt2vla5sss2t4cnch0tc3vzh643v8qcfvc7a",
                         network: Network.AleoTestnet,
                         filter: {
                             programIds: [PROGRAM_ID],
