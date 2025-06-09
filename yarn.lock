@@ -1463,7 +1463,7 @@
   resolved "https://registry.yarnpkg.com/@provablehq/wasm/-/wasm-0.8.8.tgz#b162e07e79e3d70f6fc5d7c2855115937b608dcf"
   integrity sha512-EOB36wv9bAb8ISDje8ambIyixtVgkgCycUg76vlx6O9OsCSpe+4TW6kZuqc5F398GRFeo46F0Ll4NtxiYELfpw==
 
-"@puzzlehq/sdk-core@1.0.3":
+"@puzzlehq/sdk-core@1.0.3", "@puzzlehq/sdk-core@^1.0.3":
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/@puzzlehq/sdk-core/-/sdk-core-1.0.3.tgz#b4f24e6f773db3f2285ebfc8bb1eb5ee178f2a3f"
   integrity sha512-nYXunLzYmxNyTARH6lNKD0eW2DZp+XpKCPeJPLvDdIW2jy0rXdDo1L0/CTAF1r09yDjBdoibIvjzwCVljjWinA==

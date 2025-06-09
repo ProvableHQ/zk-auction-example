@@ -17,13 +17,24 @@ export const InvitedAuctions = () => {
     const [loading, setLoading] = useState(false);
     const [auctionData, setAuctionData] = useState([]);
 
+    // Process auction data whenever the auction state changes
+    useEffect(() => {
+        if (Object.keys(auctionState.auctions || {}).length > 0) {
+            processAuctionData();
+        }
+    }, [auctionState]);
+
     // Find the latest invited bids and set them.
     const processAuctionData = () => {
         setLoading(true);
         try {
-            const inviteIds = new Set(auctionState.bidInvites.filter(invite => filterVisibility(invite.data.auction_id)));
-            const invitedAuctions = Object.entries(auctionState.auctions || {})
-                .filter(([_, auction]) => inviteIds.has(auction.id))
+            const invitedAuctions = {};
+            auctionState.invitedAuctionIds.forEach((auctionId) => {
+                if (auctionState.auctions[auctionId]) {
+                    invitedAuctions[auctionId] = auctionState.auctions[auctionId];
+                }
+            });
+            console.log("Invited auctions", invitedAuctions)
             setAuctionData(invitedAuctions);
         } catch (error) {
             console.error('Error processing auction data:', error);

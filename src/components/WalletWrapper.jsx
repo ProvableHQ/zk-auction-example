@@ -4,9 +4,6 @@ import { WalletModalProvider } from "@demox-labs/aleo-wallet-adapter-reactui";
 import { PROGRAM_ID } from "../core/constants.js";
 import {
     PuzzleWalletAdapter,
-    FoxWalletAdapter,
-    SoterWalletAdapter,
-    // configureConnectionForPuzzle,
 } from "aleo-adapters";
 import {
     DecryptPermission,
@@ -21,19 +18,19 @@ export const WalletWrapper = ({ children }) => {
     const wallets = useMemo(
         () => [
             new LeoWalletAdapter({
-                appName: "Leo Auction",
+                appName: "zkAuction",
             }),
             new PuzzleWalletAdapter({
                 programIdPermissions: {
-                    ["AleoMainnet"]: [
+                    [WalletAdapterNetwork.MainnetBeta]: [
                         PROGRAM_ID,
                     ],
-                    ["AleoTestnet"]: [
+                    [WalletAdapterNetwork.TestnetBeta]: [
                         PROGRAM_ID,
                     ],
                 },
-                appName: "Leo Auction",
-                appDescription: "A simple auction game",
+                appName: "zkAuction",
+                appDescription: "Private Auctions on Aleo",
             }),
         ],
         []

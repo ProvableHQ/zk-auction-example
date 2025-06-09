@@ -1,9 +1,10 @@
 import React, {createContext, useContext, useEffect, useState} from "react";
 import { updatePublicState } from "../core/reducers/public.js";
-import { updateStateFromRecords } from "../core/reducers/demox.js";
+import { updateStateFromRecords } from "../core/reducers/private.js";
 import { parseImages } from "../core/reducers/images.js";
 import { PROGRAM_ID } from "../core/constants.js";
 import { useWallet } from "@demox-labs/aleo-wallet-adapter-react";
+import { getRecords, Network } from '@puzzlehq/sdk';
 import {convertFieldToString, fieldsToString} from "../core/encoder.js";
 import {filterVisibility, filterVisibility as f} from "../core/processing.js";
 
@@ -22,7 +23,7 @@ export const useAuctionState = () => {
 
 // Define the data structure
 export const AuctionState = ({ children }) => {
-    const { connected, requestRecords } = useWallet();
+    const { connected, requestRecords, wallet } = useWallet();
     const [auctionState, setAuctionState] = useState({
         auctions: {},
         bids: {},
@@ -210,8 +211,9 @@ export const AuctionState = ({ children }) => {
     };
 
     const updateAuctionStateFromRecords = (records) => {
+        const walletName = wallet?.adapter?.name;
         setAuctionState(prev => {
-            const privateState = updateStateFromRecords(prev, records);
+            const privateState = updateStateFromRecords(prev, records, walletName);
             const updatedState = {
                 ...prev,
                 ...privateState,
@@ -236,7 +238,32 @@ export const AuctionState = ({ children }) => {
     const updatePrivateAuctionState = async () => {
         console.log("Updating private auction state...");
         try {
-            const records = await requestRecords(PROGRAM_ID);
+            let records = [];
+            if (wallet?.adapter?.name === "Puzzle Wallet") {
+                // Page through puzzle records.
+                console.log("Fetching records from Puzzle Wallet");
+                try {
+                    // Attempt to get puzzle records.
+                    const response = await getRecords({
+                        network: Network.AleoTestnet,
+                        filter: {
+                            programIds: [PROGRAM_ID],
+                            status: 'All'
+                        },
+                    });
+                    console.log(`Records fetched from the Puzzle Wallet:`, response.records);
+
+                    // Push the records to the array.
+                    records.push(...response.records);
+                    console.log(`Fetched ${response.records.length} records from the Puzzle Wallet`);
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                } catch (error) {
+                    console.log("Error fetching records from Puzzle Wallet at page", error);
+                }
+            } else {
+                console.log("Fetching records from Demox Wallet");
+                records = await requestRecords(PROGRAM_ID);
+            }
             updateAuctionStateFromRecords(records);
         } catch (error) {
             console.error("Error fetching records:", error);
@@ -282,6 +309,17 @@ export const AuctionState = ({ children }) => {
         return bids;
     }
 
+    // Get the bid receipt matching the bid ID.
+    const getBidReceipt = (bidId) => {
+        console.log(auctionState.bidReceipts);
+        return auctionState.bidReceipts.find(receipt => f(receipt.data?.bid_id) === bidId);
+    }
+
+    // Get the auction invite matching the auction ID.
+    const getAuctionInvites = (auctionId) => {
+        return auctionState.bidInvites.find(receipt => f(receipt.data?.auction_id) === auctionId);
+    }
+
     return (
         <DataContext.Provider 
             value={{
@@ -290,6 +328,8 @@ export const AuctionState = ({ children }) => {
                 getAuctionState,
                 getAuctionMetadata,
                 getAuctionBids,
+                getAuctionInvites,
+                getBidReceipt,
                 getUserBids,
                 findHighestBid,
                 updateAuctionState,

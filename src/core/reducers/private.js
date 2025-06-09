@@ -1,12 +1,19 @@
 import { filterVisibility as f } from "../processing.js";
 
-function updateStateFromRecords(state, records) {
-    console.log("Existing state", state);
-    const auctionTickets = records.filter(record => record.recordName === "AuctionTicket");
-    const bidReceipts = records.filter(record => record.recordName === "BidReceipt");
-    const bidInvites = records.filter(record => record.recordName === "BidInvite");
-    const privateBids = records.filter(record => record.recordName === "PrivateBid");
-    const userAuctions = processAuctionTickets(state, auctionTickets, bidInvites);
+function updateStateFromRecords(state, records, walletName) {
+    let nameKey = "recordName"
+    let idKey = "id"
+    console.log("Wallet Name", walletName);
+    if (walletName === "Puzzle Wallet") {
+        nameKey = "name"
+        idKey = "_id"
+    }
+
+    const auctionTickets = records.filter(record => record[nameKey] === "AuctionTicket");
+    const bidReceipts = records.filter(record => record[nameKey] === "BidReceipt");
+    const bidInvites = records.filter(record => record[nameKey] === "AuctionInvite");
+    const privateBids = records.filter(record => record[nameKey] === "PrivateBid");
+    const userAuctions = processAuctionTickets(state, auctionTickets, idKey, nameKey);
 
     // Update auctions the user has created.
     const userAuctionIds = new Set(state.userAuctionIds);
@@ -17,11 +24,10 @@ function updateStateFromRecords(state, records) {
     }
     
     // Process bid invites to find auction IDs the user was invited to.
-    const [invitedAuctionIds, invitedAuctions] = processAuctionInvites(state, bidInvites);
+    const [invitedAuctionIds, invitedAuctions] = processAuctionInvites(state, bidInvites, idKey, nameKey);
 
     // Find user bid IDs from bid receipts.
-    const [bids, bidsOnUserAuctions, userBidIds] = processBidReceipts(state, bidReceipts);
-    console.log("User bids: ", bids);
+    const [bids, bidsOnUserAuctions, userBidIds] = processBidReceipts(state, bidReceipts, idKey, nameKey);
 
     // Create a merged auctions object that preserves existing state
     const mergedAuctions = { ...state.auctions };
@@ -99,7 +105,7 @@ function updateStateFromRecords(state, records) {
     return reducedState;
 }
 
-function processAuctionInvites (state, invites) {
+function processAuctionInvites (state, invites, idKey, nameKey) {
     const auctions = { ...state.auctions };
     console.log("Processing auction invites auctions: ", auctions);
     const invitedAuctionIds = new Set(state.invitedAuctionIds);
@@ -110,7 +116,7 @@ function processAuctionInvites (state, invites) {
                 invitedAuctionIds.add(auctionId);
             }
             if (!(auctionId in auctions)) {
-                auctions[auctionId] = newAuctionFromInvite(state, invite);
+                auctions[auctionId] = newAuctionFromInvite(state, invite, idKey, nameKey);
             }
         } catch (error) {
             console.error(error);
@@ -119,7 +125,7 @@ function processAuctionInvites (state, invites) {
     return [invitedAuctionIds, auctions];
 }
 
-function processBidReceipts (state, records) {
+function processBidReceipts (state, records, idKey, nameKey) {
     const userBidIds = new Set(state.userBidIds);
     const bidsOnUserAuctions = new Set(state.bidsOnUserAuctions);
     const bids = { ...state.bids };
@@ -135,7 +141,7 @@ function processBidReceipts (state, records) {
                 bidsOnUserAuctions.add(bidId);
             }
             if (!(bidId in bids)) {
-                bids[bidId] = newBidFromReceipt(state, record);
+                bids[bidId] = newBidFromReceipt(state, record, nameKey);
             }
         } catch (error) {
             console.error(error);
@@ -146,14 +152,16 @@ function processBidReceipts (state, records) {
 }
 
 // Process auction tickets from auctions.
-function processAuctionTickets (state, auctionTickets) {
+function processAuctionTickets (state, auctionTickets, idKey, nameKey) {
+    console.log(`While processing auction Tickets: idKey: ${idKey}, nameKey: ${nameKey}`);
     const auctions = { ...state.auctions };
+
     auctionTickets.forEach(record => {
         try {
             const auctionId = f(record.data.auction_id);
             if (!(auctionId in state)) {
-                auctions[auctionId] = newAuctionFromTicket(state, record);
-            } else if (state[auctionId].activeTicket?.id !== record.id) {
+                auctions[auctionId] = newAuctionFromTicket(state, record, idKey, nameKey);
+            } else if (state.auctions[auctionId].activeTicket?.[idKey] !== record[idKey]) {
                 auctions[auctionId] = {
                     ...state[auctionId],
                     activeTicket: record,
@@ -168,9 +176,9 @@ function processAuctionTickets (state, auctionTickets) {
 }
 
 // Set auctioneer record from AuctionTicket.
-function newAuctionFromTicket (state, record) {
+function newAuctionFromTicket (state, record, idKey, nameKey) {
     // Ensure the record is an AuctionTicket.
-    if (record.recordName !== "AuctionTicket") {
+    if (record[nameKey] !== "AuctionTicket") {
         throw new Error("Attempt to add new AuctionTicket record to state failed. Record is not an AuctionTicket");
     }
 
@@ -181,7 +189,7 @@ function newAuctionFromTicket (state, record) {
         auctionId: f(record.data.auction_id),
         auctioneer: record.owner,
         bidTypes: f(record.data.settings.bid_types_accepted),
-        recordId: record.id,
+        recordId: record[idKey],
         invited: false,
         itemId: f(record.data.auction.item.id),
         highestBid: 0,
@@ -196,9 +204,9 @@ function newAuctionFromTicket (state, record) {
     };
 }
 
-function newAuctionFromInvite(state, record) {
+function newAuctionFromInvite(state, record, walletName, idKey, nameKey) {
     // Ensure the record is an AuctionInvite.
-    if (record.recordName !== "AuctionInvite") {
+    if (record[nameKey] !== "AuctionInvite") {
         throw new Error("Attempt to add new AuctionInvite record to state failed. Record is not an AuctionInvite");
     }
 
@@ -209,7 +217,7 @@ function newAuctionFromInvite(state, record) {
         auctionId: f(record.data.auction_id),
         auctioneer: f(record.data.auctioneer),
         bidTypes: f(record.data?.settings?.bid_types_accepted),
-        recordId: record.id,
+        recordId: record[idKey],
         itemId: f(record.data?.item?.id),
         highestBid: 0,
         metadata: f(record.data?.item?.offchain_data),
@@ -223,9 +231,9 @@ function newAuctionFromInvite(state, record) {
     };
 }
 
-function newBidFromReceipt(state, record) {
+function newBidFromReceipt(state, record, nameKey) {
     // Ensure the record is a BidReceipt.
-    if (record.recordName !== "BidReceipt") {
+    if (record[nameKey] !== "BidReceipt") {
         throw new Error("Attempt to add new BidReceipt record to state failed. Record is not a BidReceipt");
     }
 
